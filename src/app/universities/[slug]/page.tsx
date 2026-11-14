@@ -26,7 +26,7 @@ async function PreloadUniversity({
 }) {
   const { slug } = await params;
   const base = apiBaseUrl();
-  if (base && /^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug)) {
+  if (base !== null && /^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug)) {
     preload(`${base}/api/v1/universities/${slug}`, {
       as: "fetch",
       crossOrigin: "anonymous",

@@ -13,11 +13,17 @@ export class ApiError extends Error {
 export const API_NOT_CONFIGURED = "The data service is not configured.";
 
 /**
- * Backend origin, e.g. http://localhost:8080. It is public by design (the browser calls the
- * API directly), so it must never contain a secret. Unset means "not configured".
+ * Where the browser sends API calls. It is public by design, so it must never contain a secret.
+ * - an origin such as http://localhost:8080: the browser calls that backend directly (CORS applies);
+ * - "same-origin": relative calls to this site's own /api/v1/* proxy route, which holds the backend
+ *   address and any staging key on the server (used while the backend is access-protected);
+ * - unset: "not configured" (null).
  */
 export function apiBaseUrl(): string | null {
-  return process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/+$/, "") || null;
+  const value = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+  if (!value) return null;
+  if (value === "same-origin") return "";
+  return value.replace(/\/+$/, "") || null;
 }
 
 type Params = Record<string, string | number | readonly string[] | undefined>;
@@ -46,7 +52,7 @@ export async function apiGet<T>(
   init?: RequestInit,
 ): Promise<T> {
   const base = apiBaseUrl();
-  if (!base) throw new ApiError(0, API_NOT_CONFIGURED);
+  if (base === null) throw new ApiError(0, API_NOT_CONFIGURED);
 
   let res: Response;
   try {
