@@ -54,7 +54,11 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   const expire = useCallback(
     (deliberate = false) =>
-      setState({ status: "anonymous", serviceError: false, loggedOut: deliberate }),
+      setState({
+        status: "anonymous",
+        serviceError: false,
+        loggedOut: deliberate,
+      }),
     [],
   );
 
