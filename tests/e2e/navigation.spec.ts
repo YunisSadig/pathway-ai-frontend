@@ -1,16 +1,15 @@
 import { expect, test } from "@playwright/test";
 import { NAV } from "../../src/lib/site";
 
-test("the four primary pages resolve", async ({ page }) => {
+test("the primary pages resolve", async ({ page }) => {
   expect(NAV.map((n) => n.href)).toEqual([
-    "/",
     "/universities",
     "/scholarships",
     "/how-it-works",
   ]);
-  for (const item of NAV) {
-    const response = await page.goto(item.href);
-    expect(response?.status(), item.href).toBe(200);
+  for (const href of ["/", ...NAV.map((n) => n.href)]) {
+    const response = await page.goto(href);
+    expect(response?.status(), href).toBe(200);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   }
 });
@@ -18,17 +17,13 @@ test("the four primary pages resolve", async ({ page }) => {
 test("removed product routes return 404", async ({ request }) => {
   for (const path of [
     "/onboarding",
-    "/dashboard",
     "/workspace",
-    "/profile",
-    "/saved",
     "/compare",
     "/improvement-lab",
     "/pathway-planner",
     "/financial-planner",
     "/life-abroad",
     "/advisor-preview",
-    "/settings",
     "/scholarships/daad-scholarship-database",
     "/assessment",
   ]) {
@@ -36,7 +31,7 @@ test("removed product routes return 404", async ({ request }) => {
   }
 });
 
-test("header shows only the four links and no removed features", async ({
+test("header shows the three public links and no removed features", async ({
   page,
   isMobile,
 }) => {
@@ -45,13 +40,12 @@ test("header shows only the four links and no removed features", async ({
   const nav = page.getByRole("navigation", {
     name: isMobile ? "Mobile" : "Main",
   });
-  await expect(nav.getByRole("link")).toHaveText([
-    "Home",
+  await expect(nav.getByRole("link")).toContainText([
     "Universities",
     "Scholarships",
     "How It Works",
   ]);
-  await expect(page.getByText(/workspace|login|dashboard/i)).toHaveCount(0);
+  await expect(page.getByText(/workspace/i)).toHaveCount(0);
 });
 
 test("active route is marked in the header", async ({ page, isMobile }) => {

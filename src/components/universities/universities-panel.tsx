@@ -6,6 +6,10 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ErrorState } from "@/components/shared/error-state";
 import { LoadingState } from "@/components/shared/loading-state";
+import {
+  CatalogueProtected,
+  isGateStatus,
+} from "@/components/shared/catalogue-protected";
 import { API_NOT_CONFIGURED } from "@/lib/api/client";
 import { listUniversities } from "@/lib/api/universities";
 import {
@@ -59,6 +63,8 @@ export function UniversitiesPanel({
         </h2>
         {state === null || state.status === "loading" ? (
           <LoadingState label="Loading universities" />
+        ) : state.status === "error" && isGateStatus(state.error.status) ? (
+          <CatalogueProtected status={state.error.status} />
         ) : state.status === "error" ? (
           <ErrorState
             title={

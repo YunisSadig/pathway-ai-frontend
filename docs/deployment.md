@@ -115,28 +115,40 @@ from the first 100 programs.
 - No full-stack production integration exists: **the backend is not deployed**, so a deployed frontend cannot show data yet.
 - Hosting cost today: **$0**, provided Vercel Hobby's non-commercial condition is true. Nothing paid was created.
 
-## Protected staging (current mode while public launch is blocked)
+## Public site with student accounts (current mode)
 
-The Studyinfo reuse rights are not established, so the catalogue must not be public. Both applications are access-controlled:
+The home page, the explanations and sign-up are public: opening the site shows the Pathway AI home page and never a browser password
+prompt. The real academic catalogue stays closed, because the Studyinfo reuse rights are not established: it needs a signed-in account
+that an administrator has opened for the protected beta (`user_account.catalogue_access`). Registration alone never opens it.
 
-| Where                         | Variable                               | Purpose                                                                                                                     |
-| ----------------------------- | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| Backend                       | `STAGING_ACCESS_KEY`                   | every `/api/v1` request needs `X-Staging-Key`; the production profile refuses to start without it (or `PUBLIC_LAUNCH=true`) |
-| Frontend (server-only)        | `API_UPSTREAM_URL`, `API_STAGING_KEY`  | used by the same-origin proxy `src/app/api/v1/[...path]/route.ts`; never reach the browser bundle                           |
-| Frontend (server-only)        | `SITE_BASIC_AUTH=user:password`        | HTTP Basic authentication in `src/proxy.ts` in front of every page and the proxy                                            |
-| Frontend (public, build time) | `NEXT_PUBLIC_API_BASE_URL=same-origin` | the browser calls relative `/api/v1/*`                                                                                      |
+| Where                         | Variable                               | Purpose                                                                                                                 |
+| ----------------------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Backend                       | `STAGING_ACCESS_KEY`                   | every `/api/v1` request needs `X-Staging-Key` (infrastructure lock, not student login); the proxy adds it on the server |
+| Backend                       | `CATALOGUE_PUBLIC=false` (default)     | catalogue endpoints need an account with catalogue access (401 anonymous, 403 without access)                           |
+| Backend                       | `DB_USERNAME`/`DB_PASSWORD`            | the runtime role `pathway_app` (`docs/database/account-role.sql` in the backend repository)                             |
+| Backend                       | `SITE_URL`, `CORS_ALLOWED_ORIGINS`     | the public site origin (links in emails; the only allowed cross-origin reader)                                          |
+| Frontend (server-only)        | `API_UPSTREAM_URL`, `API_STAGING_KEY`  | used by the same-origin proxy `src/app/api/v1/[...path]/route.ts`; never reach the browser bundle                       |
+| Frontend (public, build time) | `NEXT_PUBLIC_API_BASE_URL=same-origin` | the browser calls relative `/api/v1/*`                                                                                  |
 
-Cache behaviour: the proxy passes the backend's `ETag` and `max-age=300` through and rewrites `public` to `private`, so only the visitor's own browser caches. A synchronized change is therefore visible at the latest 300 s after the sync, and immediately on the next revalidation (measured locally: 310 ms after the database commit, no rebuild). The frontend holds no copy of the catalogue.
+There is no site password any more (`SITE_BASIC_AUTH` and `PUBLIC_LAUNCH` are gone from the frontend). Sessions are an HttpOnly,
+SameSite=Lax cookie on the site's own origin; the proxy forwards only that cookie, checks `Origin` on writes, and the backend authorizes
+every call.
 
-Verify a deployment: `SITE_BASIC_AUTH=user:password node scripts/verify-deployment.mjs https://<site> same-origin` (checks the pages, the API through the proxy, the browser-only cache policy, and that the site answers 401 without the password).
+**Deployment order matters.** The proxy attaches the staging key for every visitor, so the backend that enforces the catalogue gate, the
+database role and migration V9 must be live and verified BEFORE the frontend that removes the password prompt is merged.
 
-**Public launch** = set `PUBLIC_LAUNCH=true` on both applications (and keep or drop the proxy). Do this only after a written answer to `docs/data/studyinfo-permission-request.md` (backend repository).
+Verify a deployment (reads only, needs no password): `node scripts/verify-deployment.mjs https://<site> same-origin`. It checks that the
+public pages open without a password prompt, that private pages send a visitor to log in, and that the catalogue answers 401 to anonymous
+visitors and to a forged session cookie.
+
+**Opening the catalogue to everyone** = `CATALOGUE_PUBLIC=true` on the backend, only after a written answer to
+`docs/data/studyinfo-permission-request.md` (backend repository). Until then keep it false.
 
 ## Delivery pipeline (current)
 
-- **Production = protected staging** at the project's `*.vercel.app` alias, deployed by **Vercel's Git integration** on every push to `main` (`vercel.json` no longer disables it). Changes reach `main` only through pull requests whose CI passed (format, lint, typecheck, unit tests, build, e2e); a Vercel build that fails never goes live.
-- **Pull requests** get Vercel preview deployments (also behind the site password, because the same environment variables apply to Preview).
-- **After each production deployment** the workflow `.github/workflows/verify-deployment.yml` (trigger: the `Vercel` commit status turning successful for the head of `main`; Vercel creates no GitHub Deployment) waits until `/api/version` reports the merged commit, runs `scripts/verify-deployment.mjs <site> same-origin`, then `npm run test:live` (Playwright against the live site and the hosted API behind it). It needs the repository variable `STAGING_SITE_URL` and the environment `production` (restricted to `main`) with the secret `SITE_BASIC_AUTH`.
-- Vercel project environment variables (Production and Preview, all marked sensitive): `NEXT_PUBLIC_API_BASE_URL=same-origin`, `API_UPSTREAM_URL`, `API_STAGING_KEY`, `SITE_BASIC_AUTH`.
+- **Production = public site with accounts and a closed catalogue** at the project's `*.vercel.app` alias, deployed by **Vercel's Git integration** on every push to `main` (`vercel.json` no longer disables it). Changes reach `main` only through pull requests whose CI passed (format, lint, typecheck, unit tests, build, e2e); a Vercel build that fails never goes live.
+- **Pull requests** get Vercel preview deployments (with the same environment variables as production).
+- **After each production deployment** the workflow `.github/workflows/verify-deployment.yml` (trigger: the `Vercel` commit status turning successful for the head of `main`; Vercel creates no GitHub Deployment) waits until `/api/version` reports the merged commit, runs `scripts/verify-deployment.mjs <site> same-origin`, then `npm run test:live` (Playwright against the live site and the hosted API behind it). It needs only the repository variable `STAGING_SITE_URL`. The live test creates one throwaway account (random address and password) and deletes it again.
+- Vercel project environment variables (Production and Preview, all marked sensitive): `NEXT_PUBLIC_API_BASE_URL=same-origin`, `API_UPSTREAM_URL`, `API_STAGING_KEY`.
 - Rollback: Vercel dashboard > Deployments > a previous deployment > "Promote to Production" (instant), or revert the merge commit.
 - The previous token-based `deploy.yml` was removed: it needed a Vercel access token that the Git integration makes unnecessary.

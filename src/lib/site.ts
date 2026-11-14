@@ -2,7 +2,7 @@ export const SITE = {
   name: "Pathway AI",
   tagline: "Your future deserves more than a guess.",
   description:
-    "Pathway AI is a study-abroad guide in development. Browse destinations today; verified university and scholarship information is being prepared.",
+    "Pathway AI helps international students understand programs, requirements and costs from official sources before they apply. Create a free profile to get started.",
 } as const;
 
 export interface NavItem {
@@ -10,9 +10,8 @@ export interface NavItem {
   href: string;
 }
 
-/** The four primary pages. */
+/** The primary pages (the logo is the link to the home page). */
 export const NAV: NavItem[] = [
-  { label: "Home", href: "/" },
   { label: "Universities", href: "/universities" },
   { label: "Scholarships", href: "/scholarships" },
   { label: "How It Works", href: "/how-it-works" },

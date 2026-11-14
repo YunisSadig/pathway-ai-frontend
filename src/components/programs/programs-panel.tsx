@@ -7,6 +7,10 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { ErrorState } from "@/components/shared/error-state";
 import { LoadingState } from "@/components/shared/loading-state";
 import { UniversityPagination } from "@/components/universities/university-pagination";
+import {
+  CatalogueProtected,
+  isGateStatus,
+} from "@/components/shared/catalogue-protected";
 import { API_NOT_CONFIGURED } from "@/lib/api/client";
 import { listPrograms } from "@/lib/api/programs";
 import {
@@ -91,6 +95,8 @@ export function ProgramsPanel({
         </h2>
         {state === null || state.status === "loading" ? (
           <LoadingState label="Loading programs" />
+        ) : state.status === "error" && isGateStatus(state.error.status) ? (
+          <CatalogueProtected status={state.error.status} />
         ) : state.status === "error" ? (
           <ErrorState
             title={

@@ -9,6 +9,11 @@ import { ErrorState } from "@/components/shared/error-state";
 import { DetailSection, Missing } from "@/components/shared/detail-ui";
 import { ExternalLink } from "@/components/shared/fact-ui";
 import { LoadingState } from "@/components/shared/loading-state";
+import { SaveButton } from "@/components/saved/save-button";
+import {
+  CatalogueProtected,
+  isGateStatus,
+} from "@/components/shared/catalogue-protected";
 import { API_NOT_CONFIGURED } from "@/lib/api/client";
 import { getUniversity } from "@/lib/api/universities";
 import { DEGREE_LABELS, durationLabel, NOT_STATED } from "@/lib/format";
@@ -33,6 +38,13 @@ export function UniversityDetailView() {
     return (
       <Shell>
         <LoadingState label="Loading university" rows={3} />
+      </Shell>
+    );
+  }
+  if (state.status === "error" && isGateStatus(state.error.status)) {
+    return (
+      <Shell>
+        <CatalogueProtected status={state.error.status} />
       </Shell>
     );
   }
@@ -98,6 +110,9 @@ export function UniversityDetailView() {
           </nav>
           <p className="mt-5 eyebrow">University</p>
           <h1 className="mt-2 max-w-3xl title-page">{u.name}</h1>
+          <div className="mt-4">
+            <SaveButton kind="university" id={u.slug} />
+          </div>
           <ul className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-muted-foreground">
             <li className="flex items-center gap-1.5">
               <MapPin aria-hidden className="size-4" />

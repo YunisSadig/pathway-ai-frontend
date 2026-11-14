@@ -1,11 +1,10 @@
-# Post-deployment verification of the protected staging site. Vercel's Git integration deploys main (vercel.json) and reports the result as
+# Post-deployment verification of the public site. Vercel's Git integration deploys main (vercel.json) and reports the result as
 # a commit STATUS with the context "Vercel" (it creates no GitHub Deployment, so deployment_status never fires). This workflow runs when that
 # status turns successful for the head of main: it waits until the site serves the merged commit, runs the deployment health script, then a
 # real-browser smoke test against the live site and the live API behind it. It never deploys anything and a failed CI never reaches main
 # (changes enter main only through pull requests that passed CI).
 #
-# It does nothing until the repository VARIABLE STAGING_SITE_URL is set and the environment "production" holds the secret SITE_BASIC_AUTH
-# (docs/deployment.md).
+# It does nothing until the repository VARIABLE STAGING_SITE_URL is set (no secret is needed: the site is public).
 name: Verify deployment
 
 on:
@@ -27,7 +26,6 @@ jobs:
     environment: production
     env:
       LIVE_SITE_URL: ${{ vars.STAGING_SITE_URL }}
-      SITE_BASIC_AUTH: ${{ secrets.SITE_BASIC_AUTH }}
       EXPECTED_SHA: ${{ github.sha }}
     steps:
       - uses: actions/checkout@v7

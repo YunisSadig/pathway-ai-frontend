@@ -1,9 +1,18 @@
 import type { ApiErrorBody } from "@/types/api";
 
+/** One field-level problem reported by the API (never contains the rejected value). */
+export interface FieldViolation {
+  field: string;
+  message: string;
+}
+
 export class ApiError extends Error {
   constructor(
     readonly status: number,
     message: string,
+    /** Stable machine-readable reason from the account API, e.g. INVALID_CREDENTIALS. */
+    readonly code?: string,
+    readonly violations: FieldViolation[] = [],
   ) {
     super(message);
     this.name = "ApiError";
@@ -67,7 +76,54 @@ export async function apiGet<T>(
     const body = (await res
       .json()
       .catch(() => null)) as Partial<ApiErrorBody> | null;
-    throw new ApiError(res.status, body?.message ?? res.statusText);
+    throw new ApiError(
+      res.status,
+      body?.message ?? res.statusText,
+      (body as { code?: string } | null)?.code,
+    );
   }
+  return (await res.json()) as T;
+}
+
+/**
+ * JSON write (POST, PUT, PATCH, DELETE) for the account API. The session lives in an HttpOnly cookie that the browser attaches by
+ * itself: nothing here reads, stores or sends a token. A 204 resolves to undefined.
+ */
+export async function apiSend<T = void>(
+  method: "POST" | "PUT" | "PATCH" | "DELETE",
+  path: string,
+  body?: unknown,
+): Promise<T> {
+  const base = apiBaseUrl();
+  if (base === null) throw new ApiError(0, API_NOT_CONFIGURED);
+  let res: Response;
+  try {
+    res = await fetch(`${base}${path}`, {
+      method,
+      credentials: "include",
+      headers:
+        body === undefined ? undefined : { "Content-Type": "application/json" },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+  } catch {
+    throw new ApiError(
+      0,
+      "The service could not be reached. Check your connection and try again.",
+    );
+  }
+  if (!res.ok) {
+    const err = (await res.json().catch(() => null)) as {
+      message?: string;
+      code?: string;
+      violations?: FieldViolation[];
+    } | null;
+    throw new ApiError(
+      res.status,
+      err?.message ?? res.statusText,
+      err?.code,
+      err?.violations ?? [],
+    );
+  }
+  if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
 }

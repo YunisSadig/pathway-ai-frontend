@@ -1,26 +1,36 @@
 /**
- * Same-origin proxy to the Spring Boot API, used while the backend is access-protected (data-reuse rights not yet established)
- * and as the hosted default: the browser calls `/api/v1/...` on this site, this handler calls the backend with the staging key.
+ * The only door between the browser and the Spring Boot API. The browser calls `/api/v1/...` on THIS site; this handler calls the backend.
  *
  * Server-only configuration (never NEXT_PUBLIC_*):
  *   API_UPSTREAM_URL  the backend origin (https; http only for localhost)
- *   API_STAGING_KEY   sent as `X-Staging-Key`; optional once the backend is public
+ *   API_STAGING_KEY   sent as `X-Staging-Key` (the backend refuses every call without it); optional once the backend is public
  *
- * Read-only: GET only, an allow-list of API areas, no cookies or credentials forwarded, a bounded wait (a sleeping free-tier
- * backend takes about a minute to wake). Nothing is cached here: the backend's ETag and max-age are passed through, with
- * `public` turned into `private` so that no shared cache (CDN) can ever store data that was fetched with the key.
+ * Why this exists:
+ * - The staging key and the backend address stay on the server. No secret is ever in the page or in a script.
+ * - The student's session is an HttpOnly cookie on THIS site. It is forwarded to the backend (and only that one cookie), and the
+ *   backend's `Set-Cookie` is passed back, so JavaScript can never read it and no token sits in localStorage.
+ * - State-changing calls (POST, PUT, PATCH, DELETE) are accepted only from this site's own origin (CSRF defence together with the
+ *   SameSite=Lax cookie); the `Origin` header is checked here and not forwarded.
+ * - The catalogue (programs, universities, discovery) is not even requested from the backend without a session cookie: the backend
+ *   enforces who may see it, this is a second lock.
+ * - Account answers are `no-store`; other answers keep the backend's ETag and max-age but `public` becomes `private`, so no shared
+ *   cache (CDN) can ever store data that was fetched with the key.
  */
-const ALLOWED_AREAS = new Set(["programs", "universities", "discovery"]);
+export const maxDuration = 150;
+
+const READ_ONLY_AREAS = new Set(["programs", "universities", "discovery"]);
+const CATALOGUE_AREAS = READ_ONLY_AREAS;
+const SESSION_COOKIE = "PATHWAY_SESSION";
 // A sleeping free-tier backend needed 84.6 s for its first answer (measured 2026-11-15), so wait well beyond that. The function itself may
 // run longer than the upstream wait (Fluid Compute on the Hobby plan allows it), otherwise the platform would cut the request first.
-export const maxDuration = 150;
 const UPSTREAM_TIMEOUT_MS = 130_000;
+const MAX_BODY_BYTES = 64 * 1024;
 
 type Ctx = { params: Promise<{ path: string[] }> };
 
-function problem(status: number, message: string): Response {
+function problem(status: number, message: string, code?: string): Response {
   return Response.json(
-    { status, message },
+    { status, message, ...(code ? { code } : {}) },
     { status, headers: { "Cache-Control": "no-store" } },
   );
 }
@@ -40,40 +50,103 @@ function upstreamOrigin(): string | null {
   }
 }
 
-export async function GET(
-  request: Request,
-  { params }: Ctx,
-): Promise<Response> {
+/** Only the session cookie, never the visitor's other cookies. */
+function sessionCookieOf(request: Request): string | null {
+  const header = request.headers.get("cookie");
+  if (!header) return null;
+  for (const part of header.split(";")) {
+    const [name, ...rest] = part.trim().split("=");
+    if (name === SESSION_COOKIE && rest.length)
+      return `${name}=${rest.join("=")}`;
+  }
+  return null;
+}
+
+function clientAddress(request: Request): string | null {
+  const real = request.headers.get("x-real-ip");
+  const forwarded = request.headers
+    .get("x-forwarded-for")
+    ?.split(",")[0]
+    ?.trim();
+  const candidate = real || forwarded || "";
+  return /^[0-9a-fA-F:.]{3,45}$/.test(candidate) ? candidate : null;
+}
+
+async function forward(request: Request, { params }: Ctx): Promise<Response> {
   const { path } = await params;
+  const area = path[0];
+  const isWrite = !["GET", "HEAD"].includes(request.method);
   const origin = upstreamOrigin();
   if (!origin) return problem(503, "The data service is not configured.");
   if (
     path.length === 0 ||
-    !ALLOWED_AREAS.has(path[0]) ||
+    !(area === "account" || READ_ONLY_AREAS.has(area)) ||
     path.some(
       (segment) => !/^[A-Za-z0-9._-]+$/.test(segment) || segment === "..",
     )
   ) {
     return problem(404, "Not found.");
   }
+  if (isWrite && area !== "account") return problem(405, "Method not allowed.");
+
+  if (isWrite) {
+    const sent = request.headers.get("origin");
+    if (!sent || sent !== new URL(request.url).origin) {
+      return problem(
+        403,
+        "This request was not sent from the Pathway AI website.",
+        "BAD_ORIGIN",
+      );
+    }
+  }
+
+  const cookie = sessionCookieOf(request);
+  if (CATALOGUE_AREAS.has(area) && !cookie) {
+    return problem(401, "Please log in.", "UNAUTHENTICATED");
+  }
+
+  let body: string | undefined;
+  if (isWrite) {
+    const declared = Number(request.headers.get("content-length") ?? "0");
+    if (declared > MAX_BODY_BYTES)
+      return problem(413, "The request is too large.");
+    body = await request.text();
+    if (body.length > MAX_BODY_BYTES)
+      return problem(413, "The request is too large.");
+  }
 
   const target = `${origin}/api/v1/${path.join("/")}${new URL(request.url).search}`;
   const headers: Record<string, string> = { Accept: "application/json" };
   const ifNoneMatch = request.headers.get("if-none-match");
-  if (ifNoneMatch) headers["If-None-Match"] = ifNoneMatch;
+  if (ifNoneMatch && !isWrite) headers["If-None-Match"] = ifNoneMatch;
+  if (body !== undefined && body.length > 0)
+    headers["Content-Type"] = "application/json";
+  if (cookie) headers.Cookie = cookie;
   const key = process.env.API_STAGING_KEY;
   if (key) headers["X-Staging-Key"] = key;
+  const visitor = clientAddress(request);
+  if (visitor) headers["X-Client-IP"] = visitor;
 
   let upstream: Response;
   try {
     upstream = await fetch(target, {
+      method: request.method,
       headers,
+      body: body && body.length > 0 ? body : undefined,
       cache: "no-store",
       redirect: "error",
       signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
     });
   } catch {
     return problem(502, "The data service could not be reached.");
+  }
+
+  // the staging key was refused: a deployment fault, not the visitor's doing, and not something to explain to them
+  if (
+    upstream.status === 401 &&
+    upstream.headers.get("x-pathway-gate") === "rejected"
+  ) {
+    return problem(502, "The data service refused the request.");
   }
 
   const out = new Headers();
@@ -84,13 +157,28 @@ export async function GET(
   const cacheControl = upstream.headers.get("cache-control");
   out.set(
     "Cache-Control",
-    cacheControl ? cacheControl.replace(/\bpublic\b/i, "private") : "no-store",
+    area === "account"
+      ? "no-store"
+      : cacheControl
+        ? cacheControl.replace(/\bpublic\b/i, "private")
+        : "no-store",
   );
-  // a gate rejection upstream is a deployment fault, not a client error: do not leak the reason
-  if (upstream.status === 401 || upstream.status === 429) {
-    return problem(502, "The data service refused the request.");
+  // the session cookie (set at login, cleared at logout) travels back unchanged: HttpOnly, SameSite=Lax, host-only on this site
+  for (const setCookie of upstream.headers.getSetCookie()) {
+    if (setCookie.startsWith(`${SESSION_COOKIE}=`))
+      out.append("Set-Cookie", setCookie);
   }
   if (upstream.status === 304)
     return new Response(null, { status: 304, headers: out });
-  return new Response(upstream.body, { status: upstream.status, headers: out });
+  return new Response(upstream.status === 204 ? null : upstream.body, {
+    status: upstream.status,
+    headers: out,
+  });
 }
+
+export const GET = forward;
+export const HEAD = forward;
+export const POST = forward;
+export const PUT = forward;
+export const PATCH = forward;
+export const DELETE = forward;
