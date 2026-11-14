@@ -131,3 +131,12 @@ Cache behaviour: the proxy passes the backend's `ETag` and `max-age=300` through
 Verify a deployment: `SITE_BASIC_AUTH=user:password node scripts/verify-deployment.mjs https://<site> same-origin` (checks the pages, the API through the proxy, the browser-only cache policy, and that the site answers 401 without the password).
 
 **Public launch** = set `PUBLIC_LAUNCH=true` on both applications (and keep or drop the proxy). Do this only after a written answer to `docs/data/studyinfo-permission-request.md` (backend repository).
+
+## Delivery pipeline (current)
+
+- **Production = protected staging** at the project's `*.vercel.app` alias, deployed by **Vercel's Git integration** on every push to `main` (`vercel.json` no longer disables it). Changes reach `main` only through pull requests whose CI passed (format, lint, typecheck, unit tests, build, e2e); a Vercel build that fails never goes live.
+- **Pull requests** get Vercel preview deployments (also behind the site password, because the same environment variables apply to Preview).
+- **After each production deployment** the workflow `.github/workflows/verify-deployment.yml` (trigger: `deployment_status`) waits until `/api/version` reports the merged commit, runs `scripts/verify-deployment.mjs <site> same-origin`, then `npm run test:live` (Playwright against the live site and the hosted API behind it). It needs the repository variable `STAGING_SITE_URL` and the environment `production` (restricted to `main`) with the secret `SITE_BASIC_AUTH`.
+- Vercel project environment variables (Production and Preview, all marked sensitive): `NEXT_PUBLIC_API_BASE_URL=same-origin`, `API_UPSTREAM_URL`, `API_STAGING_KEY`, `SITE_BASIC_AUTH`.
+- Rollback: Vercel dashboard > Deployments > a previous deployment > "Promote to Production" (instant), or revert the merge commit.
+- The previous token-based `deploy.yml` was removed: it needed a Vercel access token that the Git integration makes unnecessary.

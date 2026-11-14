@@ -1,0 +1,51 @@
+# Post-deployment verification of the protected staging site. Vercel's Git integration deploys main (vercel.json); this workflow runs when
+# that PRODUCTION deployment reports success: it waits until the site serves the merged commit, runs the deployment health script, then a
+# real-browser smoke test against the live site and the live API behind it. It never deploys anything and a failed CI never reaches main
+# (changes enter main only through pull requests that passed CI).
+#
+# It does nothing until the repository VARIABLE STAGING_SITE_URL is set and the environment "production" holds the secret SITE_BASIC_AUTH
+# (docs/deployment.md).
+name: Verify deployment
+
+on:
+  deployment_status:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-deployment
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    if: ${{ vars.STAGING_SITE_URL != '' && (github.event_name == 'workflow_dispatch' || (github.event.deployment_status.state == 'success' && github.event.deployment.environment == 'Production')) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    env:
+      LIVE_SITE_URL: ${{ vars.STAGING_SITE_URL }}
+      SITE_BASIC_AUTH: ${{ secrets.SITE_BASIC_AUTH }}
+      EXPECTED_SHA: ${{ github.event_name == 'deployment_status' && github.event.deployment.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'deployment_status' && github.event.deployment.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Wait for the merged commit to be served, then check health
+        run: node scripts/verify-deployment.mjs "$LIVE_SITE_URL" same-origin
+      - run: npx playwright install --with-deps chromium
+      - name: Browser smoke test against the live site
+        run: npx playwright test -c playwright.live.config.ts
+      - name: Upload traces on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-smoke-traces
+          path: test-results

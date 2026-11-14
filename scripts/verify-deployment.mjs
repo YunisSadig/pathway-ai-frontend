@@ -54,6 +54,32 @@ const get = async (url, init) => {
 };
 
 console.log(`Frontend: ${site}`);
+
+// EXPECTED_SHA: after a merge, wait until the deployment that serves the site was built from that commit (GET /api/version).
+const expected = process.env.EXPECTED_SHA;
+if (expected) {
+  const deadline = Date.now() + 25 * 60 * 1000;
+  let served = null;
+  while (Date.now() < deadline) {
+    const res = await get(`${site}/api/version`);
+    served = res.status === 200 ? (await res.json())?.commit : null;
+    if (served === expected) break;
+    console.log(
+      `  waiting: site serves ${served ? served.slice(0, 7) : "nothing yet"}, want ${expected.slice(0, 7)}`,
+    );
+    await new Promise((r) => setTimeout(r, 20_000));
+  }
+  if (served === expected)
+    ok(`serves the merged commit ${expected.slice(0, 7)}`);
+  else {
+    bad(
+      `the site does not serve the merged commit (serves ${served ?? "nothing"})`,
+    );
+    console.log("\n1 check(s) failed");
+    process.exit(1);
+  }
+}
+
 for (const path of ["/", "/universities", "/scholarships", "/how-it-works"]) {
   const res = await get(site + path);
   const type = res.headers?.get?.("content-type") ?? "";
