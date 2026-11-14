@@ -163,6 +163,23 @@ describe("same-origin API proxy", () => {
   });
 });
 
+describe("cold-start tolerance", () => {
+  it("waits longer than a sleeping free-tier backend needs (84.6 s measured) and stays within the function limit", async () => {
+    vi.stubEnv("API_UPSTREAM_URL", "https://api.example.com");
+    const timeout = vi.spyOn(AbortSignal, "timeout");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response("{}", { status: 200 })),
+    );
+    await call(["programs"]);
+    const waited = timeout.mock.calls[0][0] as number;
+    const { maxDuration } = await import("@/app/api/v1/[...path]/route");
+    expect(waited).toBeGreaterThan(100_000);
+    expect(maxDuration * 1000).toBeGreaterThan(waited);
+    timeout.mockRestore();
+  });
+});
+
 describe("same-origin base URL", () => {
   it("maps 'same-origin' to relative calls and keeps other values as origins", async () => {
     const { apiBaseUrl } = await import("@/lib/api/client");

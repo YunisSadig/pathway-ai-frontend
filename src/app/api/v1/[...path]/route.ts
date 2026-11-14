@@ -11,7 +11,10 @@
  * `public` turned into `private` so that no shared cache (CDN) can ever store data that was fetched with the key.
  */
 const ALLOWED_AREAS = new Set(["programs", "universities", "discovery"]);
-const UPSTREAM_TIMEOUT_MS = 75_000;
+// A sleeping free-tier backend needed 84.6 s for its first answer (measured 2026-11-15), so wait well beyond that. The function itself may
+// run longer than the upstream wait (Fluid Compute on the Hobby plan allows it), otherwise the platform would cut the request first.
+export const maxDuration = 150;
+const UPSTREAM_TIMEOUT_MS = 130_000;
 
 type Ctx = { params: Promise<{ path: string[] }> };
 
