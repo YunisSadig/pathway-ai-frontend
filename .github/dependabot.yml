@@ -1,0 +1,11 @@
+# Weekly dependency and workflow-action update PRs; each runs the normal CI (format, lint, typecheck, unit, build, e2e) before merging.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 5
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 5
