@@ -114,3 +114,20 @@ from the first 100 programs.
 - The frontend builds with the API origin supplied as an environment variable; no code change is needed to deploy.
 - No full-stack production integration exists: **the backend is not deployed**, so a deployed frontend cannot show data yet.
 - Hosting cost today: **$0**, provided Vercel Hobby's non-commercial condition is true. Nothing paid was created.
+
+## Protected staging (current mode while public launch is blocked)
+
+The Studyinfo reuse rights are not established, so the catalogue must not be public. Both applications are access-controlled:
+
+| Where                         | Variable                               | Purpose                                                                                                                     |
+| ----------------------------- | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Backend                       | `STAGING_ACCESS_KEY`                   | every `/api/v1` request needs `X-Staging-Key`; the production profile refuses to start without it (or `PUBLIC_LAUNCH=true`) |
+| Frontend (server-only)        | `API_UPSTREAM_URL`, `API_STAGING_KEY`  | used by the same-origin proxy `src/app/api/v1/[...path]/route.ts`; never reach the browser bundle                           |
+| Frontend (server-only)        | `SITE_BASIC_AUTH=user:password`        | HTTP Basic authentication in `src/proxy.ts` in front of every page and the proxy                                            |
+| Frontend (public, build time) | `NEXT_PUBLIC_API_BASE_URL=same-origin` | the browser calls relative `/api/v1/*`                                                                                      |
+
+Cache behaviour: the proxy passes the backend's `ETag` and `max-age=300` through and rewrites `public` to `private`, so only the visitor's own browser caches. A synchronized change is therefore visible at the latest 300 s after the sync, and immediately on the next revalidation (measured locally: 310 ms after the database commit, no rebuild). The frontend holds no copy of the catalogue.
+
+Verify a deployment: `SITE_BASIC_AUTH=user:password node scripts/verify-deployment.mjs https://<site> same-origin` (checks the pages, the API through the proxy, the browser-only cache policy, and that the site answers 401 without the password).
+
+**Public launch** = set `PUBLIC_LAUNCH=true` on both applications (and keep or drop the proxy). Do this only after a written answer to `docs/data/studyinfo-permission-request.md` (backend repository).

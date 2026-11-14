@@ -31,7 +31,7 @@ async function PreloadProgram({
 }) {
   const { identifier } = await params;
   const base = apiBaseUrl();
-  if (base && /^[a-z0-9]+(-{1,2}[a-z0-9]+)*$/.test(identifier)) {
+  if (base !== null && /^[a-z0-9]+(-{1,2}[a-z0-9]+)*$/.test(identifier)) {
     preload(`${base}/api/v1/programs/${identifier}`, {
       as: "fetch",
       crossOrigin: "anonymous",
