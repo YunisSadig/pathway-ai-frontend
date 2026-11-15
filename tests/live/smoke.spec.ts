@@ -213,3 +213,47 @@ test("log in, log out, come back through the Log in link and log in again (the b
       .catch(() => undefined);
   }
 });
+
+test("a visitor explores real universities without an account, and Save asks for a free account", async ({
+  page,
+  request,
+}) => {
+  const api = await request.get("/api/v1/public/universities?size=5");
+  expect(api.status()).toBe(200);
+  const body = await api.json();
+  expect(body.totalElements).toBeGreaterThan(0);
+  // only the approved identity fields are public
+  for (const u of body.content) {
+    expect(Object.keys(u).sort()).toEqual([
+      "city",
+      "countryCode",
+      "countryName",
+      "name",
+      "slug",
+      "trackedPrograms",
+      "verifiedOn",
+      "websiteUrl",
+    ]);
+  }
+  await page.goto("/universities");
+  await expect(page.getByText("What is covered today")).toBeVisible();
+  await page.getByRole("link", { name: body.content[0].name }).first().click();
+  await expect(page).toHaveURL(
+    new RegExp(`/universities/${body.content[0].slug}`),
+  );
+  await expect(
+    page.getByRole("heading", { level: 1, name: body.content[0].name }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("not everything the university teaches"),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(
+    page.getByText("A free account is needed to save"),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Sign up" }).last(),
+  ).toHaveAttribute("href", /next=%2Funiversities%2F/);
+  // the academic catalogue is still closed to visitors
+  expect((await request.get("/api/v1/programs?size=1")).status()).toBe(401);
+});
