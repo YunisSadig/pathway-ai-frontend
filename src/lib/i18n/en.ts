@@ -416,6 +416,18 @@ export const en = {
   "auth.google.err.unverified":
     "Google did not confirm this email address, so an account cannot be created from it.",
   "auth.google.err.unavailable": "Google sign-in is not available right now.",
+  "auth.link.title": "Connect Google to your account",
+  "auth.link.description":
+    "One quick step so your profile and saved items stay together.",
+  "auth.link.explain":
+    "An account already exists with {email}. Confirm your existing Pathway AI password once to connect Google. Afterwards, you can sign in using either method.",
+  "auth.link.submit": "Confirm and connect Google",
+  "auth.link.connecting": "Connecting…",
+  "auth.link.cancel": "Cancel and go back",
+  "auth.link.expired":
+    "This step has expired or is no longer available. Please choose Continue with Google again, or log in with your email.",
+  "auth.link.taken":
+    "This Google account cannot be connected. Log in with your password instead.",
   "settings.googleTitle": "Google sign-in",
   "settings.googleOnly":
     "You sign in with Google, so this account has no password.",

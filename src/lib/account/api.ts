@@ -45,6 +45,14 @@ export const accountApi = {
     apiSend<{ url: string }>("POST", `${BASE}/oauth/google/link`, {
       password,
     }),
+  /** The address Google just proved, when this browser has a parked "connect Google to my existing account" step (404 otherwise). */
+  pendingGoogleLink: () =>
+    apiGet<{ email: string }>(`${BASE}/oauth/google/pending-link`),
+  /** The one-time proof: the existing account's password. Success links Google to THAT account and opens its session. */
+  confirmGoogleLink: (password: string) =>
+    apiSend<{ next: string }>("POST", `${BASE}/oauth/google/confirm-link`, {
+      password,
+    }),
   updateDisplayName: (displayName: string) =>
     apiSend<Account>("PATCH", `${BASE}/me`, { displayName }),
   deleteAccount: (password: string) => apiSend("DELETE", BASE, { password }),
