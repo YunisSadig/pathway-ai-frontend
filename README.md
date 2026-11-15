@@ -9,15 +9,15 @@ Pathway AI helps international students (from Azerbaijan, Kazakhstan, Georgia, U
 
 ## What works today
 
-| Area | Status |
-| --- | --- |
-| Public site: home, About, How it works, Privacy, Terms, Contact | Working |
-| Accounts: sign up, log in, log out, change password, delete account, data export | Working (email verification and reset need an email provider: **not switched on yet**) |
-| Guided profile (six steps, autosave, resume, review): citizenship/residence, education (school, bachelor's, master's, graduated), grades on the scale printed on your transcript, skills, internships, volunteering, IELTS / TOEFL / SAT, destinations, tuition budget in 13 currencies | Working |
-| Profile picture (crop, replace, remove) | Working |
-| English and Russian, theme (System / Light / Dark) in Settings | Working (legal pages and the catalogue screens are English only) |
-| University and program discovery, saved items | Protected beta (invited accounts) |
-| Scholarships, personalised matching / AI advice | **Not built yet** (clearly labelled "coming soon") |
+| Area                                                                                                                                                                                                                                                                                    | Status                                                                                 |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| Public site: home, About, How it works, Privacy, Terms, Contact                                                                                                                                                                                                                         | Working                                                                                |
+| Accounts: sign up, log in, log out, change password, delete account, data export                                                                                                                                                                                                        | Working (email verification and reset need an email provider: **not switched on yet**) |
+| Guided profile (six steps, autosave, resume, review): citizenship/residence, education (school, bachelor's, master's, graduated), grades on the scale printed on your transcript, skills, internships, volunteering, IELTS / TOEFL / SAT, destinations, tuition budget in 13 currencies | Working                                                                                |
+| Profile picture (crop, replace, remove)                                                                                                                                                                                                                                                 | Working                                                                                |
+| English and Russian, theme (System / Light / Dark) in Settings                                                                                                                                                                                                                          | Working (legal pages and the catalogue screens are English only)                       |
+| University and program discovery, saved items                                                                                                                                                                                                                                           | Protected beta (invited accounts)                                                      |
+| Scholarships, personalised matching / AI advice                                                                                                                                                                                                                                         | **Not built yet** (clearly labelled "coming soon")                                     |
 
 ## Stack
 
@@ -37,12 +37,12 @@ Create `.env.local` from `.env.example`. For a local backend set `NEXT_PUBLIC_AP
 
 ## Test
 
-| Command | Purpose |
-| --- | --- |
-| `npm run check` | Prettier, ESLint, TypeScript, unit tests |
-| `npm run test:e2e` | Playwright on desktop and mobile with accessibility checks (the API is mocked in the browser; no backend needed). Stop anything already listening on port 3100 first |
-| `npm run test:live` | Smoke test of the deployed site and the hosted API (creates and deletes a disposable account): `LIVE_SITE_URL=https://... npm run test:live` |
-| `npm run verify:deployment -- <site-url> same-origin` | Read-only deployment check (public pages, private-page redirects, closed catalogue) |
+| Command                                               | Purpose                                                                                                                                                              |
+| ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run check`                                       | Prettier, ESLint, TypeScript, unit tests                                                                                                                             |
+| `npm run test:e2e`                                    | Playwright on desktop and mobile with accessibility checks (the API is mocked in the browser; no backend needed). Stop anything already listening on port 3100 first |
+| `npm run test:live`                                   | Smoke test of the deployed site and the hosted API (creates and deletes a disposable account): `LIVE_SITE_URL=https://... npm run test:live`                         |
+| `npm run verify:deployment -- <site-url> same-origin` | Read-only deployment check (public pages, private-page redirects, closed catalogue)                                                                                  |
 
 ## Deployment
 
