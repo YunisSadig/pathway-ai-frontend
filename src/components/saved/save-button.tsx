@@ -1,13 +1,12 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { Bookmark, BookmarkCheck } from "lucide-react";
 import { useState } from "react";
 import { useSession } from "@/components/account/session-provider";
 import { Button } from "@/components/ui/button";
 import { useErrorText } from "@/lib/account/errors";
 import { useT } from "@/lib/i18n";
+import { SavePrompt } from "./save-prompt";
 import { useSaved } from "./saved-provider";
 
 /** Save or unsave a program or a university. Visitors are invited to log in; a failure is shown, never swallowed. */
@@ -22,7 +21,6 @@ export function SaveButton({
   const { describe } = useErrorText();
   const { state } = useSession();
   const saved = useSaved();
-  const pathname = usePathname();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,17 +29,7 @@ export function SaveButton({
       <div aria-hidden className="h-9 w-28 animate-pulse rounded-lg bg-muted" />
     );
   }
-  if (state.status === "anonymous") {
-    return (
-      <Button asChild variant="outline" size="sm">
-        <Link
-          href={`/login?next=${encodeURIComponent(pathname)}&reason=required`}
-        >
-          <Bookmark aria-hidden /> {t("save.login")}
-        </Link>
-      </Button>
-    );
-  }
+  if (state.status === "anonymous") return <SavePrompt />;
 
   const isSaved =
     kind === "program" ? saved.isProgramSaved(id) : saved.isUniversitySaved(id);

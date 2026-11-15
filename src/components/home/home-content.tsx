@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Award, Bookmark, GraduationCap, Target } from "lucide-react";
+import { FeaturedUniversities } from "@/components/home/featured-universities";
 import { Hero } from "@/components/home/hero";
 import { Button } from "@/components/ui/button";
 import { StatusBadge, type Status } from "@/components/ui/status-badge";
@@ -57,6 +58,7 @@ export function HomeContent() {
   return (
     <>
       <Hero />
+      <FeaturedUniversities />
 
       <section
         aria-labelledby="how-title"
