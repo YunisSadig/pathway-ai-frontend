@@ -13,12 +13,13 @@ import {
 import { DropdownMenu } from "radix-ui";
 import { useSession } from "@/components/account/session-provider";
 import { Button } from "@/components/ui/button";
+import { useT, type Key } from "@/lib/i18n";
 
 export const ACCOUNT_LINKS = [
-  { href: "/dashboard", label: "Dashboard", Icon: LayoutDashboard },
-  { href: "/profile", label: "Profile", Icon: UserRound },
-  { href: "/saved", label: "Saved", Icon: Bookmark },
-  { href: "/settings", label: "Settings", Icon: Settings },
+  { href: "/dashboard", label: "nav.dashboard" as Key, Icon: LayoutDashboard },
+  { href: "/profile", label: "nav.profile" as Key, Icon: UserRound },
+  { href: "/saved", label: "nav.saved" as Key, Icon: Bookmark },
+  { href: "/settings", label: "nav.settings" as Key, Icon: Settings },
 ] as const;
 
 function initialOf(name: string | null, email: string): string {
@@ -27,6 +28,7 @@ function initialOf(name: string | null, email: string): string {
 
 /** Log in and Sign up for visitors; an account menu for a signed-in student. Space is reserved while the session is read. */
 export function AuthActions() {
+  const { t } = useT();
   const { state, logout } = useSession();
   const router = useRouter();
 
@@ -34,7 +36,7 @@ export function AuthActions() {
     return (
       <div
         aria-hidden
-        className="h-9 w-24 animate-pulse rounded-lg bg-muted sm:w-40"
+        className="h-9 w-12 animate-pulse rounded-lg bg-muted min-[400px]:w-24 sm:w-40"
       />
     );
   }
@@ -48,10 +50,10 @@ export function AuthActions() {
           size="sm"
           className="hidden sm:inline-flex"
         >
-          <Link href="/login">Log in</Link>
+          <Link href="/login">{t("auth.login")}</Link>
         </Button>
-        <Button asChild size="sm">
-          <Link href="/signup">Sign up</Link>
+        <Button asChild size="sm" className="hidden min-[400px]:inline-flex">
+          <Link href="/signup">{t("auth.signup")}</Link>
         </Button>
       </div>
     );
@@ -61,8 +63,8 @@ export function AuthActions() {
   return (
     <DropdownMenu.Root>
       <DropdownMenu.Trigger
-        aria-label="Account menu"
-        className="inline-flex h-11 items-center gap-2 rounded-lg border border-border bg-surface pr-2 pl-1.5 transition-colors duration-150 hover:bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        aria-label={t("nav.accountMenu")}
+        className="inline-flex h-11 items-center gap-2 rounded-lg border border-border bg-surface pr-1.5 pl-1.5 transition-colors duration-150 hover:bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:pr-2"
       >
         <span
           aria-hidden
@@ -73,7 +75,10 @@ export function AuthActions() {
         <span className="hidden max-w-32 truncate text-sm font-semibold sm:block">
           {user.displayName || user.email.split("@")[0]}
         </span>
-        <ChevronDown aria-hidden className="size-4 text-muted-foreground" />
+        <ChevronDown
+          aria-hidden
+          className="hidden size-4 text-muted-foreground sm:block"
+        />
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
         <DropdownMenu.Content
@@ -83,7 +88,7 @@ export function AuthActions() {
         >
           <div className="px-3 py-2">
             <p className="truncate text-sm font-semibold">
-              {user.displayName || "Your account"}
+              {user.displayName || t("nav.yourAccount")}
             </p>
             <p className="truncate text-sm text-muted-foreground">
               {user.email}
@@ -97,7 +102,7 @@ export function AuthActions() {
                 className="flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium outline-none data-[highlighted]:bg-hover"
               >
                 <Icon aria-hidden className="size-4 text-muted-foreground" />
-                {label}
+                {t(label)}
               </Link>
             </DropdownMenu.Item>
           ))}
@@ -110,7 +115,7 @@ export function AuthActions() {
             className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg px-3 text-sm font-medium outline-none data-[highlighted]:bg-hover"
           >
             <LogOut aria-hidden className="size-4 text-muted-foreground" />
-            Log out
+            {t("nav.logout")}
           </DropdownMenu.Item>
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
@@ -120,6 +125,7 @@ export function AuthActions() {
 
 /** The same actions inside the mobile menu. */
 export function MobileAccountLinks({ onNavigate }: { onNavigate: () => void }) {
+  const { t } = useT();
   const { state, logout } = useSession();
   const router = useRouter();
   if (state.status === "loading") return null;
@@ -128,12 +134,12 @@ export function MobileAccountLinks({ onNavigate }: { onNavigate: () => void }) {
       <div className="grid gap-2 border-t border-border pt-4">
         <Button asChild size="lg">
           <Link href="/signup" onClick={onNavigate}>
-            Sign up
+            {t("auth.signup")}
           </Link>
         </Button>
         <Button asChild size="lg" variant="outline">
           <Link href="/login" onClick={onNavigate}>
-            Log in
+            {t("auth.login")}
           </Link>
         </Button>
       </div>
@@ -149,7 +155,7 @@ export function MobileAccountLinks({ onNavigate }: { onNavigate: () => void }) {
             className="flex min-h-11 items-center gap-3 rounded-lg px-3 text-base font-medium text-muted-foreground transition-colors hover:bg-hover hover:text-foreground"
           >
             <Icon aria-hidden className="size-5" />
-            {label}
+            {t(label)}
           </Link>
         </li>
       ))}
@@ -164,7 +170,7 @@ export function MobileAccountLinks({ onNavigate }: { onNavigate: () => void }) {
           className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-base font-medium text-muted-foreground transition-colors hover:bg-hover hover:text-foreground"
         >
           <LogOut aria-hidden className="size-5" />
-          Log out
+          {t("nav.logout")}
         </button>
       </li>
     </ul>

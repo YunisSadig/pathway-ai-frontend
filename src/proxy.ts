@@ -10,7 +10,7 @@ import type { NextRequest } from "next/server";
  *   afterwards. This is a convenience only: the cookie is not validated here, and the backend authorizes every single API call.
  * - Security headers on every response.
  */
-const PRIVATE_PATHS = ["/dashboard", "/profile", "/saved", "/settings"];
+const PRIVATE_PATHS = ["/dashboard", "/profile", "/saved"];
 const SESSION_COOKIE = "PATHWAY_SESSION";
 
 export function isPrivatePath(pathname: string): boolean {

@@ -7,12 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { accountApi } from "@/lib/account/api";
-import { describeError, fieldErrors } from "@/lib/account/errors";
+import { useErrorText } from "@/lib/account/errors";
 import { useAccountConfig } from "@/lib/account/use-account-config";
-import { ApiError } from "@/lib/api/client";
+import { useT } from "@/lib/i18n";
 
 /** "Forgot your password": answers the same for every address, and says plainly when email is not available yet. */
 export function ForgotPasswordForm() {
+  const { t } = useT();
+  const { describe } = useErrorText();
   const { config } = useAccountConfig();
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
@@ -21,17 +23,15 @@ export function ForgotPasswordForm() {
 
   if (config && !config.emailDeliveryAvailable) {
     return (
-      <Alert kind="info" title="Not available yet">
-        Resetting a password by email is not switched on yet. If you cannot log
-        in, contact us through the Contact page and we will help.
+      <Alert kind="info" title={t("auth.notAvailableTitle")}>
+        {t("auth.resetUnavailable")}
       </Alert>
     );
   }
   if (sent) {
     return (
-      <Alert kind="success" title="Check your inbox">
-        If that address has an account, we have sent a link to choose a new
-        password. It works for one hour.
+      <Alert kind="success" title={t("auth.checkInbox")}>
+        {t("auth.resetSent")}
       </Alert>
     );
   }
@@ -40,7 +40,7 @@ export function ForgotPasswordForm() {
     event.preventDefault();
     if (pending) return;
     if (!email.trim()) {
-      setError("Enter your email address.");
+      setError(t("auth.enterEmail"));
       return;
     }
     setPending(true);
@@ -49,7 +49,7 @@ export function ForgotPasswordForm() {
       await accountApi.forgotPassword(email.trim());
       setSent(true);
     } catch (e) {
-      setError(describeError(e));
+      setError(describe(e));
       setPending(false);
     }
   }
@@ -57,7 +57,7 @@ export function ForgotPasswordForm() {
   return (
     <form onSubmit={submit} noValidate className="grid gap-5">
       {error ? <Alert kind="error">{error}</Alert> : null}
-      <Field id="email" label="Email address">
+      <Field id="email" label={t("auth.email")}>
         {(p) => (
           <Input
             {...p}
@@ -72,13 +72,15 @@ export function ForgotPasswordForm() {
         )}
       </Field>
       <Button type="submit" size="lg" disabled={pending}>
-        {pending ? "Sending…" : "Send the link"}
+        {pending ? t("auth.sending") : t("auth.sendLink")}
       </Button>
     </form>
   );
 }
 
 export function ResetPasswordForm() {
+  const { t } = useT();
+  const { describe, fields } = useErrorText();
   const router = useRouter();
   const params = useSearchParams();
   const token = params.get("token") ?? "";
@@ -89,8 +91,8 @@ export function ResetPasswordForm() {
 
   if (!token) {
     return (
-      <Alert kind="error" title="This link is incomplete">
-        Open the link from the email again, or request a new one.
+      <Alert kind="error" title={t("auth.linkIncomplete")}>
+        {t("auth.linkIncompleteBody")}
       </Alert>
     );
   }
@@ -105,9 +107,9 @@ export function ResetPasswordForm() {
       await accountApi.resetPassword(token, password);
       router.replace("/login?reason=reset");
     } catch (e) {
-      const fields = fieldErrors(e);
-      if (Object.keys(fields).length) setErrors(fields);
-      else setError(describeError(e));
+      const f = fields(e);
+      if (Object.keys(f).length) setErrors(f);
+      else setError(describe(e));
       setPending(false);
     }
   }
@@ -117,8 +119,8 @@ export function ResetPasswordForm() {
       {error ? <Alert kind="error">{error}</Alert> : null}
       <Field
         id="newPassword"
-        label="New password"
-        hint="At least 10 characters."
+        label={t("settings.newPassword")}
+        hint={t("auth.passwordHintShort")}
         error={errors.newPassword}
       >
         {(p) => (
@@ -134,7 +136,7 @@ export function ResetPasswordForm() {
         )}
       </Field>
       <Button type="submit" size="lg" disabled={pending}>
-        {pending ? "Saving…" : "Change password"}
+        {pending ? t("common.saving") : t("settings.changePassword")}
       </Button>
     </form>
   );
@@ -142,6 +144,8 @@ export function ResetPasswordForm() {
 
 /** Spends the one-time link from the verification email as soon as the page opens. */
 export function VerifyEmailView() {
+  const { t } = useT();
+  const { describe } = useErrorText();
   const params = useSearchParams();
   const token = params.get("token") ?? "";
   const started = useRef(false);
@@ -157,29 +161,30 @@ export function VerifyEmailView() {
       .verifyEmail(token)
       .then(() => setState("done"))
       .catch((e) => {
-        setMessage(e instanceof ApiError ? e.message : describeError(e));
+        setMessage(describe(e));
         setState("failed");
       });
+    // describe is recreated every render; the call must run once
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   if (state === "working") {
     return (
       <p role="status" className="text-muted-foreground">
-        Confirming your email address…
+        {t("auth.confirming")}
       </p>
     );
   }
   if (state === "done") {
     return (
-      <Alert kind="success" title="Email confirmed">
-        Thank you. Your email address is now confirmed.
+      <Alert kind="success" title={t("auth.confirmedTitle")}>
+        {t("auth.confirmedBody")}
       </Alert>
     );
   }
   return (
-    <Alert kind="error" title="This link did not work">
-      {message ?? "The link is incomplete."} Log in and request a new one from
-      Settings.
+    <Alert kind="error" title={t("auth.linkFailedTitle")}>
+      {message ?? t("auth.linkIncompleteBody")} {t("auth.linkFailedHelp")}
     </Alert>
   );
 }

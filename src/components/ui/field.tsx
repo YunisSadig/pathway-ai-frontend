@@ -1,4 +1,7 @@
+"use client";
+
 import * as React from "react";
+import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 /**
@@ -28,6 +31,7 @@ export function Field({
     "aria-invalid"?: true;
   }) => React.ReactNode;
 }) {
+  const { t } = useT();
   const hintId = hint ? `${id}-hint` : undefined;
   const errorId = error ? `${id}-error` : undefined;
   const describedBy = [hintId, errorId].filter(Boolean).join(" ") || undefined;
@@ -37,7 +41,7 @@ export function Field({
         {label}
         {optional ? (
           <span className="ml-1 font-normal text-muted-foreground">
-            (optional)
+            ({t("common.optional")})
           </span>
         ) : null}
       </label>
@@ -53,7 +57,7 @@ export function Field({
       ) : null}
       {error ? (
         <p id={errorId} className="text-sm font-medium text-danger">
-          <span className="sr-only">Error: </span>
+          <span className="sr-only">{t("common.error")}: </span>
           {error}
         </p>
       ) : null}

@@ -127,3 +127,38 @@ export async function apiSend<T = void>(
   if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
 }
+
+/**
+ * Binary upload (the profile picture). The session cookie goes along by itself; nothing here reads a token. The caller has already
+ * re-encoded the picture, and the server verifies the file type and re-encodes it again.
+ */
+export async function apiUpload<T>(
+  path: string,
+  body: Blob,
+  contentType: string,
+): Promise<T> {
+  const base = apiBaseUrl();
+  if (base === null) throw new ApiError(0, API_NOT_CONFIGURED);
+  let res: Response;
+  try {
+    res = await fetch(`${base}${path}`, {
+      method: "PUT",
+      credentials: "include",
+      headers: { "Content-Type": contentType },
+      body,
+    });
+  } catch {
+    throw new ApiError(
+      0,
+      "The service could not be reached. Check your connection and try again.",
+    );
+  }
+  if (!res.ok) {
+    const err = (await res.json().catch(() => null)) as {
+      message?: string;
+      code?: string;
+    } | null;
+    throw new ApiError(res.status, err?.message ?? res.statusText, err?.code);
+  }
+  return (await res.json()) as T;
+}

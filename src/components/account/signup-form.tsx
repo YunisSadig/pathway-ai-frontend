@@ -8,13 +8,16 @@ import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { accountApi } from "@/lib/account/api";
-import { describeError, fieldErrors } from "@/lib/account/errors";
+import { useErrorText } from "@/lib/account/errors";
 import { useAccountConfig } from "@/lib/account/use-account-config";
+import { useT } from "@/lib/i18n";
 import { useSession } from "./session-provider";
 
 const MIN = 10;
 
 export function SignupForm() {
+  const { t } = useT();
+  const { describe, fields } = useErrorText();
   const router = useRouter();
   const { refresh } = useSession();
   const { config } = useAccountConfig();
@@ -32,14 +35,11 @@ export function SignupForm() {
     event.preventDefault();
     if (pending) return;
     const next: Record<string, string> = {};
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      next.email = "Enter a valid email address.";
-    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))
+      next.email = t("err.invalidEmail");
     if (password.length < MIN)
-      next.password = `Use at least ${MIN} characters.`;
-    if (!agreed)
-      next.agreed =
-        "Please confirm that you have read the Terms and the Privacy policy.";
+      next.password = t("auth.passwordShort", { n: MIN });
+    if (!agreed) next.agreed = t("auth.agreeError");
     setErrors(next);
     setFormError(null);
     if (Object.keys(next).length) return;
@@ -59,31 +59,28 @@ export function SignupForm() {
       await refresh();
       router.replace("/dashboard?welcome=1");
     } catch (e) {
-      const fields = fieldErrors(e);
-      if (Object.keys(fields).length) setErrors(fields);
-      else setFormError(describeError(e));
+      const f = fields(e);
+      if (Object.keys(f).length) setErrors(f);
+      else setFormError(describe(e));
       setPending(false);
     }
   }
 
   if (checkEmail) {
     return (
-      <Alert kind="success" title="Check your inbox">
-        If {checkEmail} can be used, we have sent a message with the next step.
-        The link works for 24 hours.
+      <Alert kind="success" title={t("auth.checkInbox")}>
+        {t("auth.checkInboxBody", { email: checkEmail })}
       </Alert>
     );
   }
 
   if (config && !config.registrationOpen) {
     return (
-      <Alert kind="info" title="Sign-up is closed for now">
-        New accounts are not being created at the moment. If you already have an
-        account,{" "}
+      <Alert kind="info" title={t("auth.closedTitle")}>
+        {t("auth.closedBody")}{" "}
         <Link href="/login" className="font-semibold underline">
-          log in
+          {t("auth.login")}
         </Link>
-        .
       </Alert>
     );
   }
@@ -91,7 +88,7 @@ export function SignupForm() {
   return (
     <form onSubmit={submit} noValidate className="grid gap-5">
       {formError ? <Alert kind="error">{formError}</Alert> : null}
-      <Field id="email" label="Email address" error={errors.email}>
+      <Field id="email" label={t("auth.email")} error={errors.email}>
         {(p) => (
           <Input
             {...p}
@@ -107,9 +104,9 @@ export function SignupForm() {
       </Field>
       <Field
         id="displayName"
-        label="Name"
+        label={t("bg.name")}
         optional
-        hint="How we greet you. You can change it later."
+        hint={t("bg.nameHint")}
         error={errors.displayName}
       >
         {(p) => (
@@ -126,8 +123,8 @@ export function SignupForm() {
       </Field>
       <Field
         id="password"
-        label="Password"
-        hint={`At least ${MIN} characters. A few random words make a strong password. ${password.length}/${MIN}+`}
+        label={t("auth.password")}
+        hint={t("auth.passwordHint", { n: MIN, count: password.length })}
         error={errors.password}
       >
         {(p) => (
@@ -147,13 +144,13 @@ export function SignupForm() {
               onClick={() => setShow((s) => !s)}
               aria-pressed={show}
             >
-              {show ? "Hide" : "Show"}
+              {show ? t("auth.hide") : t("auth.show")}
             </Button>
           </div>
         )}
       </Field>
       <div className="grid gap-1.5">
-        <label className="flex items-start gap-3 text-sm">
+        <label className="flex cursor-pointer items-start gap-3 text-sm">
           <input
             type="checkbox"
             name="agreed"
@@ -161,35 +158,32 @@ export function SignupForm() {
             onChange={(e) => setAgreed(e.target.checked)}
             aria-invalid={errors.agreed ? true : undefined}
             aria-describedby={errors.agreed ? "agreed-error" : undefined}
-            className="mt-0.5 size-5 shrink-0 accent-[var(--primary)]"
+            className="mt-0.5 size-5 shrink-0 cursor-pointer accent-[var(--primary)]"
           />
           <span>
-            I have read the{" "}
+            {t("auth.agreePrefix")}{" "}
             <Link href="/terms" className="font-semibold underline">
-              Terms
+              {t("footer.terms")}
             </Link>{" "}
-            and the{" "}
+            {t("auth.agreeAnd")}{" "}
             <Link href="/privacy" className="font-semibold underline">
-              Privacy policy
+              {t("footer.privacy")}
             </Link>
             .
           </span>
         </label>
         {errors.agreed ? (
           <p id="agreed-error" className="text-sm font-medium text-danger">
-            <span className="sr-only">Error: </span>
+            <span className="sr-only">{t("common.error")}: </span>
             {errors.agreed}
           </p>
         ) : null}
       </div>
       <Button type="submit" size="lg" disabled={pending}>
-        {pending ? "Creating your account…" : "Create your account"}
+        {pending ? t("auth.creating") : t("auth.createAccount")}
       </Button>
       {config && !config.emailDeliveryAvailable ? (
-        <p className="text-sm text-muted-foreground">
-          Email confirmation is not switched on yet, so your address is not
-          verified. Your account still works.
-        </p>
+        <p className="text-sm text-muted-foreground">{t("auth.noEmailYet")}</p>
       ) : null}
     </form>
   );

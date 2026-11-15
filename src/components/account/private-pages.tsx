@@ -1,18 +1,15 @@
 "use client";
 
 import { DashboardView } from "./dashboard-view";
-import { PrivatePage } from "./private-page";
-import { ProfileForm } from "./profile-form";
+import { OpenPage, PrivatePage } from "./private-page";
 import { ProfileView } from "./profile-view";
 import { SavedView } from "./saved-view";
 import { SettingsView } from "./settings-view";
+import { ProfileWizard } from "@/components/profile/profile-wizard";
 
 export function DashboardPageClient() {
   return (
-    <PrivatePage
-      title="Your dashboard"
-      description="Your profile, your saved items and what is available to you."
-    >
+    <PrivatePage titleKey="dash.title" descriptionKey="dash.description">
       {(user) => <DashboardView user={user} />}
     </PrivatePage>
   );
@@ -20,10 +17,7 @@ export function DashboardPageClient() {
 
 export function ProfilePageClient() {
   return (
-    <PrivatePage
-      title="Your profile"
-      description="What you have told us about your studies and plans."
-    >
+    <PrivatePage titleKey="profile.title" descriptionKey="profile.description">
       {() => <ProfileView />}
     </PrivatePage>
   );
@@ -31,33 +25,25 @@ export function ProfilePageClient() {
 
 export function ProfileEditPageClient() {
   return (
-    <PrivatePage
-      title="Edit your profile"
-      description="Everything is optional. Share only what you are comfortable with."
-    >
-      {() => <ProfileForm />}
+    <PrivatePage titleKey="wizard.title" descriptionKey="wizard.description">
+      {() => <ProfileWizard />}
     </PrivatePage>
   );
 }
 
 export function SavedPageClient() {
   return (
-    <PrivatePage
-      title="Saved"
-      description="Programs and universities you want to come back to."
-    >
+    <PrivatePage titleKey="saved.title" descriptionKey="saved.description">
       {(user) => <SavedView user={user} />}
     </PrivatePage>
   );
 }
 
+/** Settings is open to everyone: appearance and language only change this browser. */
 export function SettingsPageClient() {
   return (
-    <PrivatePage
-      title="Settings"
-      description="Your account, your password and your data."
-    >
-      {(user) => <SettingsView user={user} />}
-    </PrivatePage>
+    <OpenPage titleKey="settings.title" descriptionKey="settings.description">
+      <SettingsView />
+    </OpenPage>
   );
 }

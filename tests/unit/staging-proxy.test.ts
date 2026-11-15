@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { GET, POST } from "@/app/api/v1/[...path]/route";
+import { GET, POST, PUT } from "@/app/api/v1/[...path]/route";
 import { NextRequest } from "next/server";
 import { isPrivatePath, proxy } from "@/proxy";
 
@@ -12,13 +12,7 @@ const COOKIE = { cookie: "PATHWAY_SESSION=abc; other=zzz" };
 
 describe("page proxy", () => {
   it("knows which pages are private", () => {
-    for (const p of [
-      "/dashboard",
-      "/profile",
-      "/profile/edit",
-      "/saved",
-      "/settings",
-    ])
+    for (const p of ["/dashboard", "/profile", "/profile/edit", "/saved"])
       expect(isPrivatePath(p)).toBe(true);
     for (const p of [
       "/",
@@ -27,6 +21,7 @@ describe("page proxy", () => {
       "/programs",
       "/profiles",
       "/about",
+      "/settings",
     ])
       expect(isPrivatePath(p)).toBe(false);
   });
@@ -260,6 +255,83 @@ describe("account area", () => {
       "PATHWAY_SESSION=tok; Path=/; HttpOnly; SameSite=Lax",
     ]);
     expect(res.headers.get("cache-control")).toBe("no-store");
+  });
+});
+
+describe("profile picture through the proxy", () => {
+  const origin = { origin: "https://site.test", cookie: "PATHWAY_SESSION=abc" };
+  const put = (type: string, bytes: Uint8Array) =>
+    PUT(
+      new Request("https://site.test/api/v1/account/avatar", {
+        method: "PUT",
+        headers: { ...origin, "content-type": type },
+        body: bytes as unknown as BodyInit,
+      }),
+      { params: Promise.resolve({ path: ["account", "avatar"] }) },
+    );
+
+  it("forwards the bytes of a JPEG untouched and refuses other types before they leave the site", async () => {
+    vi.stubEnv("API_UPSTREAM_URL", "https://api.example.com");
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response('{"present":true,"version":1}', {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4]);
+    expect((await put("image/jpeg", jpeg)).status).toBe(200);
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(init.headers).toMatchObject({
+      "Content-Type": "image/jpeg",
+      Cookie: "PATHWAY_SESSION=abc",
+    });
+    expect(new Uint8Array(init.body as ArrayBuffer)).toEqual(jpeg);
+    for (const type of [
+      "text/plain",
+      "image/svg+xml",
+      "image/gif",
+      "application/json",
+    ]) {
+      expect((await put(type, jpeg)).status, type).toBe(415);
+    }
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("refuses a picture above the size limit", async () => {
+    vi.stubEnv("API_UPSTREAM_URL", "https://api.example.com");
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    expect((await put("image/jpeg", new Uint8Array(430 * 1024))).status).toBe(
+      413,
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("caches a versioned picture privately and never an unversioned one", async () => {
+    vi.stubEnv("API_UPSTREAM_URL", "https://api.example.com");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation(() =>
+        Promise.resolve(
+          new Response(new Uint8Array([1, 2, 3]), {
+            status: 200,
+            headers: { "content-type": "image/jpeg" },
+          }),
+        ),
+      ),
+    );
+    const get = (query: string) =>
+      GET(
+        new Request("https://site.test/api/v1/account/avatar" + query, {
+          headers: origin,
+        }),
+        { params: Promise.resolve({ path: ["account", "avatar"] }) },
+      );
+    expect((await get("?v=3")).headers.get("cache-control")).toBe(
+      "private, max-age=86400",
+    );
+    expect((await get("")).headers.get("cache-control")).toBe("no-store");
   });
 });
 

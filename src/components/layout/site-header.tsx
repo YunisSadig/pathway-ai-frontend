@@ -8,7 +8,8 @@ import { Suspense, useState } from "react";
 import { NAV, SITE, type NavItem } from "@/lib/site";
 import { cn } from "@/lib/utils";
 import { AuthActions, MobileAccountLinks } from "./account-menu";
-import { ThemeSwitcher } from "./theme-switcher";
+import { LanguageSwitcher } from "./language-switcher";
+import { useT } from "@/lib/i18n";
 
 /** A path from where you are to where you want to study: two points joined by a curve. */
 export function LogoMark({ className }: { className?: string }) {
@@ -79,6 +80,7 @@ function NavLinkList({
   linkClassName,
   pathname,
 }: NavLinksProps & { pathname: string | null }) {
+  const { t } = useT();
   return (
     <ul className={className}>
       {items.map((item) => {
@@ -102,7 +104,7 @@ function NavLinkList({
                 linkClassName,
               )}
             >
-              {item.label}
+              {t(item.labelKey)}
             </Link>
           </li>
         );
@@ -112,20 +114,21 @@ function NavLinkList({
 }
 
 export function SiteHeader() {
+  const { t } = useT();
   const [open, setOpen] = useState(false);
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur">
       <div className="page-container flex h-16 items-center justify-between gap-4">
         <Logo />
-        <nav aria-label="Main" className="hidden md:block">
+        <nav aria-label={t("nav.main")} className="hidden md:block">
           <NavLinks className="flex items-center gap-1" />
         </nav>
         <div className="flex items-center gap-2">
-          <ThemeSwitcher />
+          <LanguageSwitcher />
           <AuthActions />
           <Dialog.Root open={open} onOpenChange={setOpen}>
             <Dialog.Trigger
-              aria-label="Open menu"
+              aria-label={t("nav.openMenu")}
               className="inline-flex size-11 items-center justify-center rounded-lg border border-border bg-surface transition-colors duration-150 hover:bg-hover md:hidden"
             >
               <Menu className="size-5" aria-hidden />
@@ -138,17 +141,17 @@ export function SiteHeader() {
               >
                 <div className="flex items-center justify-between">
                   <Dialog.Title className="font-display text-lg font-bold">
-                    Menu
+                    {t("nav.menu")}
                   </Dialog.Title>
                   <Dialog.Close
-                    aria-label="Close menu"
+                    aria-label={t("nav.closeMenu")}
                     className="inline-flex size-11 items-center justify-center rounded-lg transition-colors hover:bg-hover"
                   >
                     <X className="size-5" aria-hidden />
                   </Dialog.Close>
                 </div>
                 <nav
-                  aria-label="Mobile"
+                  aria-label={t("nav.mobile")}
                   className="-mr-2 flex flex-col gap-4 overflow-y-auto pr-2"
                 >
                   <NavLinks

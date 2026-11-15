@@ -24,7 +24,117 @@ export interface FakeAccountApi {
   /** Simulates a session that ended on the server. */
   expireSession(): Promise<void>;
   options: { registrationOpen: boolean; emailDeliveryAvailable: boolean };
+  /** What GET /options/destinations answers. Restricted by default, like an account without catalogue access. */
+  destinations: {
+    restricted: boolean;
+    countries: { code: string; name: string }[];
+    universities: { slug: string; name: string; countryCode: string }[];
+  };
+  /** The v2 profile document per account, as the server would hold it. */
+  documents: Map<string, Record<string, unknown>>;
+  avatars: Map<string, number>;
+  /** Every language the page asked the server to remember. */
+  languages: string[];
 }
+
+/** What the backend's GET /options answers (the five supported countries, the scales, the currencies, ...). */
+export const OPTIONS = {
+  countries: ["AZ", "KZ", "GE", "UZ", "KG"].map((code, i) => ({
+    code,
+    defaultCurrency: ["AZN", "KZT", "GEL", "UZS", "KGS"][i],
+  })),
+  scales: [
+    { scale: "FIVE_POINT", min: "1", max: "5", letters: false },
+    { scale: "TEN_POINT", min: "1", max: "10", letters: false },
+    { scale: "PERCENT_100", min: "0", max: "100", letters: false },
+    { scale: "GPA_4", min: "0", max: "4", letters: false },
+    { scale: "LETTER", min: null, max: null, letters: true },
+    { scale: "OTHER", min: null, max: null, letters: false },
+  ],
+  letters: [
+    "A+",
+    "A",
+    "A-",
+    "B+",
+    "B",
+    "B-",
+    "C+",
+    "C",
+    "C-",
+    "D+",
+    "D",
+    "D-",
+    "E",
+    "FX",
+    "F",
+  ],
+  specializations: [
+    ...[
+      "computer_science",
+      "software_engineering",
+      "information_technology",
+      "cybersecurity",
+      "data_science",
+      "artificial_intelligence",
+      "information_systems",
+    ].map((code) => ({ code, area: "CS_IT" })),
+    ...[
+      "economics",
+      "finance",
+      "accounting",
+      "business_administration",
+      "business_analytics",
+      "management",
+    ].map((code) => ({ code, area: "ECON_BUSINESS" })),
+  ],
+  skills: [
+    ...[
+      "java",
+      "python",
+      "javascript_typescript",
+      "csharp",
+      "react",
+      "spring_boot",
+      "cloud_computing",
+      "machine_learning",
+    ].map((code) => ({ code, group: "IT" })),
+    ...["sql", "data_analysis"].map((code) => ({ code, group: "BOTH" })),
+    ...[
+      "excel",
+      "financial_analysis",
+      "accounting_skill",
+      "business_analysis",
+      "statistics",
+      "econometrics",
+      "power_bi",
+      "financial_modelling",
+    ].map((code) => ({ code, group: "ECON" })),
+  ],
+  currencies: [
+    "AZN",
+    "KZT",
+    "GEL",
+    "UZS",
+    "KGS",
+    "EUR",
+    "USD",
+    "PLN",
+    "CZK",
+    "HUF",
+    "RON",
+    "DKK",
+    "SEK",
+  ],
+  commonCurrencies: ["EUR", "USD"],
+  languages: ["en", "ru"],
+  toeflNewScaleEffectiveFrom: "2026-01-21",
+};
+
+/** A 1x1 picture, enough for an <img> to load. */
+const TINY_JPEG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
+  "base64",
+);
 
 const EMPTY_PROFILE = {
   currentCountry: null,
@@ -61,6 +171,10 @@ export async function mockAccountApi(
       emailDeliveryAvailable: false,
       ...options,
     },
+    destinations: { restricted: true, countries: [], universities: [] },
+    documents: new Map(),
+    avatars: new Map(),
+    languages: [],
     async expireSession() {
       state.current = null;
       await page.context().clearCookies({ name: "PATHWAY_SESSION" });
@@ -261,6 +375,89 @@ export async function mockAccountApi(
         return reply(route, 200, {
           account: view(me),
           profile: state.profiles.get(me.id) ?? null,
+        });
+      }
+      // ---- student profile v2
+      const emptyDoc = {
+        skills: [],
+        internships: [],
+        volunteering: [],
+        exams: [],
+        destinations: [],
+        preferredUniversities: [],
+        onboarding: { status: "NOT_STARTED", step: 0 },
+      };
+      const profileView = () => {
+        const profile = (state.documents.get(me.id) ?? emptyDoc) as {
+          onboarding?: { status?: string };
+        };
+        const done = profile.onboarding?.status === "COMPLETED";
+        const version = state.avatars.get(me.id) ?? 0;
+        return {
+          profile,
+          avatar: { present: version > 0, version },
+          completeness: {
+            complete: done,
+            missing: done ? [] : ["citizenship"],
+          },
+          legacy: null,
+          updatedAt: null,
+        };
+      };
+      if (path === "/options" && method === "GET")
+        return reply(route, 200, OPTIONS);
+      if (path === "/options/destinations" && method === "GET")
+        return reply(route, 200, state.destinations);
+      if (path === "/student-profile" && method === "GET")
+        return reply(route, 200, profileView());
+      if (path === "/student-profile" && method === "PUT") {
+        const previous = state.documents.get(me.id) as
+          { onboarding?: { status?: string } } | undefined;
+        const onboarding = {
+          status:
+            previous?.onboarding?.status === "COMPLETED"
+              ? "COMPLETED"
+              : "IN_PROGRESS",
+          step: (input.onboarding as { step?: number } | undefined)?.step ?? 0,
+        };
+        state.documents.set(me.id, { ...emptyDoc, ...input, onboarding });
+        return reply(route, 200, profileView());
+      }
+      if (path === "/student-profile/complete" && method === "POST") {
+        const doc = (state.documents.get(me.id) ?? emptyDoc) as Record<
+          string,
+          unknown
+        >;
+        state.documents.set(me.id, {
+          ...doc,
+          onboarding: { status: "COMPLETED", step: 5 },
+        });
+        return reply(route, 200, profileView());
+      }
+      if (path === "/language" && method === "PUT") {
+        state.languages.push(String(input.language));
+        return reply(route, 204);
+      }
+      if (path === "/avatar" && method === "PUT") {
+        const version = (state.avatars.get(me.id) ?? 0) + 1;
+        state.avatars.set(me.id, version);
+        return reply(route, 200, { present: true, version });
+      }
+      if (path === "/avatar" && method === "DELETE") {
+        state.avatars.delete(me.id);
+        return reply(route, 204);
+      }
+      if (path === "/avatar" && method === "GET") {
+        if (!state.avatars.has(me.id))
+          return error(route, 404, "NOT_FOUND", "No picture.");
+        return route.fulfill({
+          status: 200,
+          contentType: "image/png",
+          headers: {
+            "access-control-allow-origin": SITE,
+            "access-control-allow-credentials": "true",
+          },
+          body: TINY_JPEG,
         });
       }
       return error(route, 404, "NOT_FOUND", "Not found.");

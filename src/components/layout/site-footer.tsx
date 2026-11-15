@@ -1,12 +1,16 @@
+"use client";
+
 import Link from "next/link";
 import { LogoMark } from "@/components/layout/site-header";
+import { useT, type Key } from "@/lib/i18n";
 import { NAV, SITE } from "@/lib/site";
 
-const COMPANY = [
-  { label: "About", href: "/about" },
-  { label: "Privacy", href: "/privacy" },
-  { label: "Terms", href: "/terms" },
-  { label: "Contact", href: "/contact" },
+const COMPANY: { key: Key; href: string }[] = [
+  { key: "footer.about", href: "/about" },
+  { key: "footer.privacy", href: "/privacy" },
+  { key: "footer.terms", href: "/terms" },
+  { key: "footer.contact", href: "/contact" },
+  { key: "footer.settings", href: "/settings" },
 ];
 
 function FooterLinks({
@@ -36,6 +40,7 @@ function FooterLinks({
 }
 
 export function SiteFooter() {
+  const { t } = useT();
   return (
     <footer className="border-t border-border bg-muted">
       <div className="page-container grid gap-8 py-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr]">
@@ -45,17 +50,21 @@ export function SiteFooter() {
             {SITE.name}
           </p>
           <p className="mt-3 text-sm text-muted-foreground">
-            A study-abroad guide in early release. Facts come from official
-            sources and are shown with where they came from.
+            {t("footer.blurb")}
           </p>
         </div>
-        <FooterLinks title="Explore" links={NAV} />
-        <FooterLinks title="Pathway AI" links={COMPANY} />
+        <FooterLinks
+          title={t("footer.explore")}
+          links={NAV.map((n) => ({ label: t(n.labelKey), href: n.href }))}
+        />
+        <FooterLinks
+          title={SITE.name}
+          links={COMPANY.map((c) => ({ label: t(c.key), href: c.href }))}
+        />
       </div>
       <div className="border-t border-border">
         <p className="page-container py-5 text-sm text-muted-foreground">
-          {SITE.name} is in early release. Fees, deadlines and requirements can
-          change: always confirm them on the official university website.
+          {t("footer.disclaimer")}
         </p>
       </div>
     </footer>
