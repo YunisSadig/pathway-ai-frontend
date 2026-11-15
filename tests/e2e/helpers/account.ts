@@ -242,6 +242,10 @@ export async function mockAccountApi(
     emailVerified: false,
     catalogueAccess: false,
     createdAt: "2000-01-01T00:00:00Z",
+    avatar: {
+      present: (state.avatars.get(a.id) ?? 0) > 0,
+      version: state.avatars.get(a.id) ?? 0,
+    },
   });
 
   await page.route(

@@ -9,6 +9,8 @@ export interface Account {
   /** True when an administrator has opened the (protected beta) catalogue for this account. */
   catalogueAccess: boolean;
   createdAt: string;
+  /** The profile picture's state, from the same answer every screen reads (so the navigation can never lag behind the profile). */
+  avatar?: { present: boolean; version: number };
 }
 
 /** What the service can really do right now, so the site never offers a button that cannot work. */
