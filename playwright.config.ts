@@ -24,7 +24,6 @@ export default defineConfig({
     // backend is needed. A stale server on this port would have been built without it.
     env: {
       NEXT_PUBLIC_API_BASE_URL: "http://api.pathway.test",
-      PUBLIC_LAUNCH: "true", // the test server has no site password; production builds fail closed without one
     },
     reuseExistingServer: !process.env.CI,
     timeout: 240_000,

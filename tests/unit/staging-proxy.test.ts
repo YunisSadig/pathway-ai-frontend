@@ -1,39 +1,58 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { GET } from "@/app/api/v1/[...path]/route";
-import { evaluateAccess } from "@/proxy";
+import { GET, POST } from "@/app/api/v1/[...path]/route";
+import { NextRequest } from "next/server";
+import { isPrivatePath, proxy } from "@/proxy";
 
 afterEach(() => {
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
 });
 
-const basic = (value: string) => `Basic ${btoa(value)}`;
+const COOKIE = { cookie: "PATHWAY_SESSION=abc; other=zzz" };
 
-describe("evaluateAccess", () => {
-  it("is open for a deliberate public launch and in development", () => {
-    expect(
-      evaluateAccess(null, { PUBLIC_LAUNCH: "true", NODE_ENV: "production" }),
-    ).toBe("allow");
-    expect(evaluateAccess(null, { NODE_ENV: "development" })).toBe("allow");
+describe("page proxy", () => {
+  it("knows which pages are private", () => {
+    for (const p of [
+      "/dashboard",
+      "/profile",
+      "/profile/edit",
+      "/saved",
+      "/settings",
+    ])
+      expect(isPrivatePath(p)).toBe(true);
+    for (const p of [
+      "/",
+      "/login",
+      "/signup",
+      "/programs",
+      "/profiles",
+      "/about",
+    ])
+      expect(isPrivatePath(p)).toBe(false);
   });
 
-  it("fails closed in production when nothing is configured", () => {
-    expect(evaluateAccess(null, { NODE_ENV: "production" })).toBe(
-      "unconfigured",
+  it("sends a visitor without a session cookie to log in and remembers the page", () => {
+    const res = proxy(new NextRequest("https://site.test/profile/edit?x=1"));
+    expect(res.status).toBe(307);
+    const location = new URL(res.headers.get("location")!);
+    expect(location.pathname).toBe("/login");
+    expect(location.searchParams.get("next")).toBe("/profile/edit?x=1");
+  });
+
+  it("never asks for a browser password and serves public pages with security headers", () => {
+    const res = proxy(new NextRequest("https://site.test/"));
+    expect(res.status).toBe(200);
+    expect(res.headers.get("www-authenticate")).toBeNull();
+    expect(res.headers.get("x-frame-options")).toBe("DENY");
+    expect(res.headers.get("x-content-type-options")).toBe("nosniff");
+  });
+
+  it("lets a private page through when a session cookie exists, uncached", () => {
+    const res = proxy(
+      new NextRequest("https://site.test/dashboard", { headers: COOKIE }),
     );
-    expect(
-      evaluateAccess(null, { PUBLIC_LAUNCH: "yes", NODE_ENV: "production" }),
-    ).toBe("unconfigured");
-  });
-
-  it("challenges everything except the exact credentials", () => {
-    const env = { SITE_BASIC_AUTH: "staff:s3cret", NODE_ENV: "production" };
-    expect(evaluateAccess(null, env)).toBe("challenge");
-    expect(evaluateAccess("Bearer abc", env)).toBe("challenge");
-    expect(evaluateAccess("Basic !!!notbase64", env)).toBe("challenge");
-    expect(evaluateAccess(basic("staff:wrong"), env)).toBe("challenge");
-    expect(evaluateAccess(basic("staff:s3cret "), env)).toBe("challenge");
-    expect(evaluateAccess(basic("staff:s3cret"), env)).toBe("allow");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("cache-control")).toBe("no-store");
   });
 });
 
@@ -75,14 +94,15 @@ describe("same-origin API proxy", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
     const res = await call(["programs"], "?q=bio&page=1", {
-      cookie: "session=abc",
+      ...COOKIE,
       authorization: "Basic eDp5",
     });
     expect(fetchMock).toHaveBeenCalledOnce();
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe("https://api.example.com/api/v1/programs?q=bio&page=1");
     expect(init.headers).toMatchObject({ "X-Staging-Key": "the-key" });
-    expect(JSON.stringify(init.headers)).not.toMatch(/session=abc|Basic/);
+    expect(init.headers).toMatchObject({ Cookie: "PATHWAY_SESSION=abc" });
+    expect(JSON.stringify(init.headers)).not.toMatch(/other=zzz|Basic/);
     expect(res.status).toBe(200);
     expect(res.headers.get("etag")).toBe('"e1"');
     expect(res.headers.get("cache-control")).toBe(
@@ -101,6 +121,7 @@ describe("same-origin API proxy", () => {
       );
     vi.stubGlobal("fetch", fetchMock);
     const res = await call(["programs", "a--b"], "", {
+      ...COOKIE,
       "if-none-match": '"e1"',
     });
     expect((fetchMock.mock.calls[0][1] as RequestInit).headers).toMatchObject({
@@ -129,16 +150,21 @@ describe("same-origin API proxy", () => {
     vi.stubEnv("API_UPSTREAM_URL", "https://api.example.com");
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue(new Response("nope", { status: 401 })),
+      vi.fn().mockResolvedValue(
+        new Response("nope", {
+          status: 401,
+          headers: { "x-pathway-gate": "rejected" },
+        }),
+      ),
     );
-    const refused = await call(["programs"]);
+    const refused = await call(["programs"], "", COOKIE);
     expect(refused.status).toBe(502);
     expect(refused.headers.get("cache-control")).toBe("no-store");
     vi.stubGlobal(
       "fetch",
       vi.fn().mockRejectedValue(new Error("connect ECONNREFUSED 10.0.0.1")),
     );
-    const down = await call(["programs"]);
+    const down = await call(["programs"], "", COOKIE);
     expect(down.status).toBe(502);
     expect(await down.text()).not.toContain("10.0.0.1");
   });
@@ -157,8 +183,82 @@ describe("same-origin API proxy", () => {
         }),
       ),
     );
-    const res = await call(["programs", "zz--missing"]);
+    const res = await call(["programs", "zz--missing"], "", COOKIE);
     expect(res.status).toBe(404);
+    expect(res.headers.get("cache-control")).toBe("no-store");
+  });
+});
+
+describe("account area", () => {
+  const origin = {
+    origin: "https://site.test",
+    "content-type": "application/json",
+  };
+  function post(path: string[], headers: Record<string, string>, body = "{}") {
+    return POST(
+      new Request(`https://site.test/api/v1/${path.join("/")}`, {
+        method: "POST",
+        headers,
+        body,
+      }),
+      { params: Promise.resolve({ path }) },
+    );
+  }
+
+  it("does not ask the backend for the catalogue without a session cookie", async () => {
+    vi.stubEnv("API_UPSTREAM_URL", "https://api.example.com");
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    for (const area of ["programs", "universities", "discovery"]) {
+      const res = await call([area], "", { cookie: "PATHWAY_SESSIONX=1" });
+      expect(res.status).toBe(401);
+    }
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("refuses a write from another origin or without one, and never forwards Origin", async () => {
+    vi.stubEnv("API_UPSTREAM_URL", "https://api.example.com");
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response("{}", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    expect((await post(["account", "login"], {})).status).toBe(403);
+    expect(
+      (await post(["account", "login"], { origin: "https://evil.test" }))
+        .status,
+    ).toBe(403);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect((await post(["account", "login"], origin)).status).toBe(200);
+    const sent = (fetchMock.mock.calls[0][1] as RequestInit).headers as Record<
+      string,
+      string
+    >;
+    expect(Object.keys(sent).map((k) => k.toLowerCase())).not.toContain(
+      "origin",
+    );
+  });
+
+  it("refuses writes to the catalogue", async () => {
+    vi.stubEnv("API_UPSTREAM_URL", "https://api.example.com");
+    expect((await post(["programs"], origin)).status).toBe(405);
+  });
+
+  it("passes only the session cookie back and keeps account answers uncached", async () => {
+    vi.stubEnv("API_UPSTREAM_URL", "https://api.example.com");
+    const upstream = new Response("{}", {
+      status: 200,
+      headers: { "cache-control": "max-age=300" },
+    });
+    upstream.headers.append(
+      "set-cookie",
+      "PATHWAY_SESSION=tok; Path=/; HttpOnly; SameSite=Lax",
+    );
+    upstream.headers.append("set-cookie", "tracker=1; Path=/");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(upstream));
+    const res = await post(["account", "login"], origin);
+    expect(res.headers.getSetCookie()).toEqual([
+      "PATHWAY_SESSION=tok; Path=/; HttpOnly; SameSite=Lax",
+    ]);
     expect(res.headers.get("cache-control")).toBe("no-store");
   });
 });
@@ -171,7 +271,7 @@ describe("cold-start tolerance", () => {
       "fetch",
       vi.fn().mockResolvedValue(new Response("{}", { status: 200 })),
     );
-    await call(["programs"]);
+    await call(["programs"], "", COOKIE);
     const waited = timeout.mock.calls[0][0] as number;
     const { maxDuration } = await import("@/app/api/v1/[...path]/route");
     expect(waited).toBeGreaterThan(100_000);

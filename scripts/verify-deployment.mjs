@@ -1,36 +1,31 @@
 #!/usr/bin/env node
 /**
- * Health check for a deployed frontend and the backend it talks to. It only reads.
+ * Health check for a deployed frontend and the backend behind it. It only reads (no account is created here).
  *
- *   node scripts/verify-deployment.mjs <frontend-url> [<api-url>]
- *   npm run verify:deployment -- https://example.vercel.app https://api.example.com
+ *   node scripts/verify-deployment.mjs <frontend-url> same-origin
+ *   node scripts/verify-deployment.mjs <frontend-url> [<api-url>]     (frontend that calls a backend directly)
  *
- * Checks, in order:
- *   1. the four primary pages answer 200 with HTML
- *   2. the frontend is built against an API URL (found in the shipped JavaScript) and that URL is https
- *   3. (with <api-url>) the API answers /api/v1/programs, and a browser-style request from the frontend origin
- *      is allowed by CORS (the backend must list the exact frontend origin in CORS_ALLOWED_ORIGINS)
+ * The site is public: no password is needed or sent. The checks prove what must be true BEFORE a visitor arrives:
+ *   1. the public pages answer 200 with HTML and never ask for a browser password (no WWW-Authenticate)
+ *   2. private pages send a visitor without a session to the login page
+ *   3. the academic catalogue is closed to anonymous visitors, also with a forged session cookie
+ *   4. account answers are not cacheable and the account service answers
  * Exit code 0 = healthy, 1 = a check failed, 2 = bad usage.
  */
 const [, , siteArg, apiArg] = process.argv;
 if (!siteArg) {
   console.error(
-    "Usage: node scripts/verify-deployment.mjs <frontend-url> [<api-url>]",
+    "Usage: node scripts/verify-deployment.mjs <frontend-url> [same-origin|<api-url>]",
   );
   process.exit(2);
 }
 const site = siteArg.replace(/\/+$/, "");
-// Protected staging: pass the word "same-origin" as <api-url> and set SITE_BASIC_AUTH=user:password in the environment.
-// Pages and the site's own /api/v1 proxy are read with that password; the site must answer 401 without it
-// (EXPECT_PROTECTED, default true in this mode).
 const sameOrigin = apiArg === "same-origin";
 const api = apiArg && !sameOrigin ? apiArg.replace(/\/+$/, "") : null;
 const origin = new URL(site).origin;
-const siteAuth = process.env.SITE_BASIC_AUTH
-  ? {
-      Authorization: `Basic ${Buffer.from(process.env.SITE_BASIC_AUTH).toString("base64")}`,
-    }
-  : {};
+// The catalogue may be opened deliberately (CATALOGUE_PUBLIC); the default and the current state is closed.
+const EXPECT_CATALOGUE_CLOSED =
+  (process.env.EXPECT_CATALOGUE_CLOSED ?? "true") === "true";
 
 let failed = 0;
 const ok = (m) => console.log(`  ok    ${m}`);
@@ -42,14 +37,9 @@ const warn = (m) => console.log(`  warn  ${m}`);
 
 const get = async (url, init) => {
   try {
-    const sameSite = new URL(url).origin === origin;
-    return await fetch(url, {
-      redirect: "follow",
-      ...init,
-      headers: { ...(sameSite ? siteAuth : {}), ...(init?.headers ?? {}) },
-    });
+    return await fetch(url, { redirect: "follow", ...init });
   } catch (e) {
-    return { ok: false, status: 0, error: e.message };
+    return { ok: false, status: 0, error: e.message, headers: new Headers() };
   }
 };
 
@@ -80,95 +70,89 @@ if (expected) {
   }
 }
 
-for (const path of ["/", "/universities", "/scholarships", "/how-it-works"]) {
+console.log("Public pages");
+for (const path of [
+  "/",
+  "/login",
+  "/signup",
+  "/about",
+  "/privacy",
+  "/terms",
+  "/contact",
+  "/how-it-works",
+  "/scholarships",
+  "/universities",
+]) {
   const res = await get(site + path);
   const type = res.headers?.get?.("content-type") ?? "";
-  if (res.status === 200 && type.includes("text/html")) ok(`${path} -> 200`);
+  const challenge = res.headers?.get?.("www-authenticate");
+  if (challenge) bad(`${path} asks for a browser password (${challenge})`);
+  else if (res.status === 200 && type.includes("text/html"))
+    ok(`${path} -> 200`);
   else bad(`${path} -> ${res.status || res.error}`);
+}
+
+console.log("Private pages");
+for (const path of ["/dashboard", "/profile", "/saved", "/settings"]) {
+  const res = await get(site + path, { redirect: "manual" });
+  const where = res.headers?.get?.("location") ?? "";
+  if ([302, 303, 307, 308].includes(res.status) && where.includes("/login"))
+    ok(`${path} -> login page for a visitor`);
+  else bad(`${path} did not redirect a visitor to /login (${res.status})`);
 }
 
 if (sameOrigin) {
   console.log("API through the site's own proxy (same-origin)");
-  const list = await get(`${site}/api/v1/programs?size=1`, {
+  const config = await get(`${site}/api/v1/account/config`, {
     headers: { Accept: "application/json" },
   });
-  const body = list.status === 200 ? await list.json().catch(() => null) : null;
-  if (body && Array.isArray(body.content))
-    ok(`/api/v1/programs -> 200 (${body.totalElements} programs)`);
-  else
-    bad(`/api/v1/programs through the proxy -> ${list.status || list.error}`);
-  const cc = list.headers?.get?.("cache-control") ?? "";
-  if (/\bpublic\b/i.test(cc))
-    bad(`the proxy answered a shared-cacheable Cache-Control (${cc})`);
-  else ok(`cache policy is browser-only (${cc || "none"})`);
-  if ((process.env.EXPECT_PROTECTED ?? "true") === "true") {
-    const anon = await fetch(site + "/", { redirect: "manual" }).catch(() => ({
-      status: 0,
-    }));
-    const anonApi = await fetch(site + "/api/v1/programs?size=1").catch(() => ({
-      status: 0,
-    }));
-    if (anon.status === 401 && anonApi.status === 401)
-      ok("the site and its API answer 401 without the password");
-    else
-      bad(
-        `unauthenticated access is not refused (site ${anon.status}, api ${anonApi.status})`,
-      );
-  }
-}
+  const configBody =
+    config.status === 200 ? await config.json().catch(() => null) : null;
+  if (configBody && typeof configBody.registrationOpen === "boolean") {
+    ok(
+      `account service answers (registrationOpen=${configBody.registrationOpen}, emailDelivery=${configBody.emailDeliveryAvailable}, cataloguePublic=${configBody.cataloguePublic})`,
+    );
+  } else bad(`/api/v1/account/config -> ${config.status || config.error}`);
+  const cc = config.headers?.get?.("cache-control") ?? "";
+  if (/no-store/i.test(cc)) ok("account answers are no-store");
+  else bad(`account answers are cacheable (${cc || "no Cache-Control"})`);
 
-// NEXT_PUBLIC_API_BASE_URL is inlined into the client bundle at build time, so the shipped JavaScript must
-// contain the API origin. Without <api-url> we cannot know what to look for.
-if (api) {
-  const html = await (await get(site + "/universities")).text?.();
-  const scripts = [...(html ?? "").matchAll(/src="([^"]+.js[^"]*)"/g)].map(
-    (m) => m[1],
-  );
-  let found = false;
-  for (const src of scripts) {
-    const res = await get(new URL(src, site).toString());
-    if (res.ok && (await res.text()).includes(new URL(api).origin)) {
-      found = true;
-      break;
+  const me = await get(`${site}/api/v1/account/me`);
+  if (me.status === 401) ok("an anonymous visitor has no account (401)");
+  else bad(`/api/v1/account/me without a session -> ${me.status}`);
+
+  if (EXPECT_CATALOGUE_CLOSED) {
+    for (const area of ["programs", "universities", "discovery/options"]) {
+      const anon = await get(`${site}/api/v1/${area}?size=1`);
+      const forged = await get(`${site}/api/v1/${area}?size=1`, {
+        headers: { Cookie: "PATHWAY_SESSION=forged-session-value" },
+      });
+      if (anon.status === 401 && forged.status === 401)
+        ok(`/api/v1/${area} is closed to anonymous and forged sessions`);
+      else
+        bad(
+          `/api/v1/${area} is not closed (anonymous ${anon.status}, forged ${forged.status})`,
+        );
     }
   }
-  if (!found)
-    bad(
-      `the shipped JavaScript does not contain ${new URL(api).origin}: NEXT_PUBLIC_API_BASE_URL was not set (or was different) when this build ran, so the site cannot reach the API. Set it and redeploy.`,
-    );
-  else if (
-    !api.startsWith("https://") &&
-    !new URL(site).hostname.match(/^(localhost|127.0.0.1)$/)
-  )
-    bad("production must use an https API URL");
-  else ok(`built against ${new URL(api).origin}`);
-} else if (!sameOrigin) {
-  warn(
-    "pass the API URL as the second argument to verify the build is wired to it",
-  );
 }
 
 if (api) {
   console.log(`API: ${api}`);
-  const list = await get(`${api}/api/v1/programs?size=1`, {
-    headers: { Accept: "application/json" },
-  });
-  if (list.status === 200) {
-    const body = await list.json().catch(() => null);
-    if (body && Array.isArray(body.content))
-      ok(`/api/v1/programs -> 200 (${body.totalElements} programs)`);
-    else bad("/api/v1/programs returned 200 but not a page envelope");
-  } else bad(`/api/v1/programs -> ${list.status || list.error}`);
-
-  const cors = await get(`${api}/api/v1/programs?size=1`, {
+  const config = await get(`${api}/api/v1/account/config`, {
     headers: { Accept: "application/json", Origin: origin },
   });
-  const allowed = cors.headers?.get?.("access-control-allow-origin");
-  if (allowed === origin) ok(`CORS allows ${origin}`);
-  else
-    bad(
-      `CORS does not allow ${origin} (got ${allowed ?? "no header"}, status ${cors.status}). Add it to the backend CORS_ALLOWED_ORIGINS`,
-    );
+  if (config.status === 200) ok("/api/v1/account/config -> 200");
+  else bad(`/api/v1/account/config -> ${config.status || config.error}`);
+  if (EXPECT_CATALOGUE_CLOSED) {
+    const anon = await get(`${api}/api/v1/programs?size=1`);
+    if (anon.status === 401 || anon.status === 403)
+      ok(`the API refuses an anonymous catalogue request (${anon.status})`);
+    else
+      bad(`the API answered an anonymous catalogue request (${anon.status})`);
+  }
+} else if (!sameOrigin) {
+  warn("pass 'same-origin' or the API URL as the second argument");
 }
 
 console.log(failed ? `\n${failed} check(s) failed` : "\nHealthy");

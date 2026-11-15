@@ -1,53 +1,93 @@
 import Link from "next/link";
-import { ArrowUpRight } from "lucide-react";
+import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { REGIONS } from "@/lib/geography";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { SITE } from "@/lib/site";
+
+const STEPS = [
+  {
+    title: "Create your profile",
+    body: "Your grades, language tests, budget and preferred destinations.",
+    badge: { status: "verified", label: "Available" },
+  },
+  {
+    title: "Discover programs",
+    body: "Official information with its source, for programs that fit you.",
+    badge: { status: "hypothetical", label: "Protected beta" },
+  },
+  {
+    title: "Save and compare",
+    body: "Keep a shortlist and weigh requirements and costs side by side.",
+    badge: { status: "neutral", label: "Coming soon" },
+  },
+] as const;
 
 /** Server component: no client JavaScript and no animation library. */
 export function Hero() {
   return (
-    <section className="page-container grid gap-10 py-10 sm:py-14 lg:grid-cols-[1.15fr_0.85fr] lg:items-center lg:gap-16 lg:py-20">
+    <section className="page-container grid gap-10 py-12 sm:py-16 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:gap-16 lg:py-24">
       <div>
         <p className="eyebrow">Study-abroad guide · Early release</p>
         <h1 className="mt-4 title-hero">{SITE.tagline}</h1>
         <p className="mt-5 measure text-lg text-muted-foreground sm:text-xl">
-          Browse degree programs and universities with tuition, deadlines and
-          admission requirements exactly as the university publishes them, each
-          linked to its official source. Coverage is small and growing.
+          Pathway AI helps international students understand programs,
+          requirements and costs from official sources before they apply. Create
+          a free profile to get started; the university catalogue is opening
+          step by step.
         </p>
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
           <Button asChild size="lg">
-            <Link href="/universities">Explore universities</Link>
+            <Link href="/signup">Create your profile</Link>
           </Button>
           <Button asChild size="lg" variant="outline">
-            <Link href="/how-it-works">How it works</Link>
+            <Link href="/how-it-works">Explore the platform</Link>
           </Button>
         </div>
-      </div>
-
-      <nav
-        aria-label="Study destinations"
-        className="rounded-xl border border-border bg-surface p-3 sm:p-4"
-      >
-        <p className="px-3 pt-2 pb-2 font-bold">Choose a destination</p>
-        <ul className="divide-y divide-border">
-          {REGIONS.map((r) => (
-            <li key={r.id}>
-              <Link
-                href={`/universities?region=${r.id}`}
-                className="group flex min-h-12 items-center justify-between gap-3 rounded-lg px-3 py-2 transition-colors duration-150 hover:bg-hover"
-              >
-                <span className="font-semibold">{r.name}</span>
-                <span className="flex items-center gap-2 text-sm text-muted-foreground">
-                  {r.multiCountry ? "27 member states" : null}
-                  <ArrowUpRight aria-hidden className="size-4" />
-                </span>
-              </Link>
+        <ul className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted-foreground">
+          {[
+            "Free to use",
+            "No payment details",
+            "Delete your data any time",
+          ].map((t) => (
+            <li key={t} className="inline-flex items-center gap-1.5">
+              <Check aria-hidden className="size-4 text-success" />
+              {t}
             </li>
           ))}
         </ul>
-      </nav>
+      </div>
+
+      <div className="card p-5 sm:p-6" aria-labelledby="pathway-title">
+        <h2 id="pathway-title" className="text-lg font-bold">
+          Your pathway
+        </h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          What you can do today, and what is on the way.
+        </p>
+        <ol className="mt-4 divide-y divide-border border-y border-border">
+          {STEPS.map((step, i) => (
+            <li key={step.title} className="flex items-start gap-4 py-4">
+              <span
+                aria-hidden
+                className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary-soft text-sm font-bold text-primary-soft-foreground"
+              >
+                {i + 1}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                  <p className="font-semibold">{step.title}</p>
+                  <StatusBadge status={step.badge.status}>
+                    {step.badge.label}
+                  </StatusBadge>
+                </div>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {step.body}
+                </p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </div>
     </section>
   );
 }

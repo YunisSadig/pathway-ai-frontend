@@ -7,7 +7,35 @@ import { Dialog } from "radix-ui";
 import { Suspense, useState } from "react";
 import { NAV, SITE, type NavItem } from "@/lib/site";
 import { cn } from "@/lib/utils";
+import { AuthActions, MobileAccountLinks } from "./account-menu";
 import { ThemeSwitcher } from "./theme-switcher";
+
+/** A path from where you are to where you want to study: two points joined by a curve. */
+export function LogoMark({ className }: { className?: string }) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "grid size-8 place-items-center rounded-lg bg-primary text-primary-foreground",
+        className,
+      )}
+    >
+      <svg
+        viewBox="0 0 24 24"
+        className="size-5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <circle cx="6" cy="18" r="2" />
+        <circle cx="18" cy="6" r="2" />
+        <path d="M6 16c0-6 12-4 12-8" />
+      </svg>
+    </span>
+  );
+}
 
 export function Logo() {
   return (
@@ -15,12 +43,7 @@ export function Logo() {
       href="/"
       className="flex items-center gap-2 font-display text-lg font-bold tracking-tight"
     >
-      <span
-        aria-hidden
-        className="grid size-8 place-items-center rounded-lg bg-primary text-sm text-primary-foreground"
-      >
-        P
-      </span>
+      <LogoMark />
       {SITE.name}
     </Link>
   );
@@ -99,6 +122,7 @@ export function SiteHeader() {
         </nav>
         <div className="flex items-center gap-2">
           <ThemeSwitcher />
+          <AuthActions />
           <Dialog.Root open={open} onOpenChange={setOpen}>
             <Dialog.Trigger
               aria-label="Open menu"
@@ -132,6 +156,7 @@ export function SiteHeader() {
                     className="flex flex-col gap-1"
                     linkClassName="flex min-h-11 items-center px-3 text-base"
                   />
+                  <MobileAccountLinks onNavigate={() => setOpen(false)} />
                 </nav>
               </Dialog.Content>
             </Dialog.Portal>

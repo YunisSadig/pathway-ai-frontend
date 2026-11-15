@@ -2,7 +2,13 @@ import { cn } from "@/lib/utils";
 
 /** How trustworthy a piece of information is. Shown wherever facts appear. */
 export type Status =
-  "verified" | "user" | "hypothetical" | "unknown" | "met" | "unmet";
+  | "verified"
+  | "user"
+  | "hypothetical"
+  | "unknown"
+  | "met"
+  | "unmet"
+  | "neutral";
 
 const STYLES: Record<Status, string> = {
   verified: "bg-success-soft text-success",
@@ -11,6 +17,7 @@ const STYLES: Record<Status, string> = {
   unknown: "bg-warning-soft text-warning",
   met: "bg-success-soft text-success",
   unmet: "bg-danger-soft text-danger",
+  neutral: "bg-muted text-muted-foreground",
 };
 
 const LABELS: Record<Status, string> = {
@@ -20,6 +27,7 @@ const LABELS: Record<Status, string> = {
   unknown: "Not verified",
   met: "Met",
   unmet: "Not met",
+  neutral: "Coming soon",
 };
 
 export function StatusBadge({

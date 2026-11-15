@@ -3,6 +3,8 @@ import { expect, test } from "@playwright/test";
 import { NAV } from "../../src/lib/site";
 import { mockUniversities } from "./helpers/api";
 
+const PAGES = ["/", ...NAV.map((n) => n.href)];
+
 test("hero shows the headline and two working calls to action", async ({
   page,
 }) => {
@@ -11,20 +13,11 @@ test("hero shows the headline and two working calls to action", async ({
     "Your future deserves more than a guess.",
   );
   await expect(
-    page.getByRole("link", { name: "Explore universities" }).first(),
-  ).toHaveAttribute("href", "/universities");
+    page.getByRole("link", { name: "Create your profile" }).first(),
+  ).toHaveAttribute("href", "/signup");
   await expect(
-    page.getByRole("link", { name: "How it works", exact: true }).last(),
+    page.getByRole("link", { name: "Explore the platform" }).first(),
   ).toHaveAttribute("href", "/how-it-works");
-});
-
-test("hero destinations open the matching region", async ({ page }) => {
-  await page.goto("/");
-  await page
-    .getByRole("navigation", { name: "Study destinations" })
-    .getByRole("link", { name: /European Union/ })
-    .click();
-  await expect(page).toHaveURL(/universities\?region=eu/);
 });
 
 test("every internal link on every page resolves", async ({
@@ -32,8 +25,8 @@ test("every internal link on every page resolves", async ({
   request,
 }) => {
   const seen = new Set<string>();
-  for (const item of NAV) {
-    await page.goto(item.href);
+  for (const href of PAGES) {
+    await page.goto(href);
     const hrefs = await page
       .locator("a[href^='/']")
       .evaluateAll((a) => a.map((l) => l.getAttribute("href")!));
@@ -45,11 +38,11 @@ test("every internal link on every page resolves", async ({
 });
 
 test("does not claim features or data that do not exist", async ({ page }) => {
-  for (const item of NAV) {
-    await page.goto(item.href);
+  for (const href of PAGES) {
+    await page.goto(href);
     const text = (await page.locator("main").innerText()).toLowerCase();
-    expect(text, item.href).not.toMatch(
-      /\d+% |acceptance rate|apply now|recommended for you|log in|sign up/,
+    expect(text, href).not.toMatch(
+      /\d+% |acceptance rate|apply now|recommended for you|\d+ universities|\d+ programs/,
     );
   }
 });
@@ -60,10 +53,10 @@ test("homepage stays concise", async ({ page }) => {
   const height = await page.evaluate(
     () => document.documentElement.scrollHeight,
   );
-  expect(height).toBeLessThan(2200);
+  expect(height).toBeLessThan(3200);
 });
 
-for (const path of NAV.map((n) => n.href)) {
+for (const path of PAGES) {
   for (const width of [360, 390, 430, 768, 1024, 1280, 1440]) {
     test(`no horizontal overflow on ${path} at ${width}px`, async ({
       page,
@@ -84,10 +77,7 @@ for (const path of NAV.map((n) => n.href)) {
 }
 
 for (const scheme of ["light", "dark"] as const) {
-  for (const path of [
-    ...NAV.map((n) => n.href),
-    "/universities?region=eu&country=poland",
-  ]) {
+  for (const path of [...PAGES, "/universities?region=eu&country=poland"]) {
     test(`no axe violations on ${path} (${scheme})`, async ({ page }) => {
       await mockUniversities(page);
       await page.emulateMedia({ colorScheme: scheme });

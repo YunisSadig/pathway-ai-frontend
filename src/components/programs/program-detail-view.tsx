@@ -22,6 +22,11 @@ import { ErrorState } from "@/components/shared/error-state";
 import { ExternalLink } from "@/components/shared/fact-ui";
 import { LoadingState } from "@/components/shared/loading-state";
 import { SectionNav } from "@/components/shared/section-nav";
+import { SaveButton } from "@/components/saved/save-button";
+import {
+  CatalogueProtected,
+  isGateStatus,
+} from "@/components/shared/catalogue-protected";
 import { API_NOT_CONFIGURED } from "@/lib/api/client";
 import { getProgram } from "@/lib/api/programs";
 import {
@@ -64,6 +69,13 @@ export function ProgramDetailView() {
     return (
       <Shell>
         <LoadingState label="Loading program" rows={4} />
+      </Shell>
+    );
+  }
+  if (state.status === "error" && isGateStatus(state.error.status)) {
+    return (
+      <Shell>
+        <CatalogueProtected status={state.error.status} />
       </Shell>
     );
   }
@@ -259,6 +271,9 @@ function ProgramDetailContent({ p }: { p: ProgramDetail }) {
                 {p.field ? ` · ${p.field.name}` : ""}
               </p>
               <h1 className="mt-2 max-w-3xl title-page">{p.name}</h1>
+              <div className="mt-4">
+                <SaveButton kind="program" id={p.identifier} />
+              </div>
               <p className="mt-2 text-lg">
                 <Link
                   href={`/universities/${university.slug}`}
