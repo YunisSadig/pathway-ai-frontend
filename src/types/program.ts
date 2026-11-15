@@ -70,6 +70,8 @@ export interface ProgramListItem {
   /** An ACTIVE apply link. Only present when verified for a current or upcoming cycle. */
   officialApplicationUrl: string | null;
   verification: Verification;
+  /** Public program detail only: the day the official source was last read successfully (a source check, not a change of facts). */
+  lastCheckedOn?: string | null;
 }
 
 export interface SourceRef {
