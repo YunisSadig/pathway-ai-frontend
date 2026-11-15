@@ -1,155 +1,160 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { countryLabel } from "@/lib/account/countries";
-import {
-  LEVEL_LABELS,
-  SEASON_LABELS,
-  TARGET_LABELS,
-  TEST_LABELS,
-  type Profile,
-} from "@/lib/account/types";
-import { useProfile } from "@/lib/account/use-profile";
+import { Avatar } from "@/components/profile/avatar-uploader";
+import { ReviewStep } from "@/components/profile/step-review";
+import { ApiError } from "@/lib/api/client";
+import { useT } from "@/lib/i18n";
+import { profileApi } from "@/lib/profile/api";
+import type {
+  Destinations,
+  Options,
+  StudentProfileView,
+} from "@/lib/profile/types";
+import { STEPS, validateStep, type Problems } from "@/lib/profile/validation";
+import { useSession } from "./session-provider";
 
-const NONE = "Not provided";
+export type LoadedProfile = {
+  view: StudentProfileView;
+  options: Options;
+  destinations: Destinations;
+};
 
-function Row({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="grid gap-1 py-3 sm:grid-cols-[14rem_1fr] sm:gap-4">
-      <dt className="text-sm font-semibold text-muted-foreground">{label}</dt>
-      <dd>{children}</dd>
-    </div>
-  );
-}
-
-function Section({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section aria-label={title} className="card p-6">
-      <h2 className="text-lg font-bold">{title}</h2>
-      <dl className="mt-2 divide-y divide-border">{children}</dl>
-    </section>
-  );
-}
-
-function money(p: Profile): string {
-  if (p.maxAnnualTuition == null) return NONE;
-  try {
-    return new Intl.NumberFormat("en", {
-      style: "currency",
-      currency: p.maxAnnualTuitionCurrency ?? "EUR",
-      maximumFractionDigits: 0,
-    }).format(p.maxAnnualTuition);
-  } catch {
-    return `${p.maxAnnualTuition} ${p.maxAnnualTuitionCurrency ?? ""}`;
-  }
+/** Reads the student's own profile (no editing here: every block links to the wizard step that edits it). */
+export function useLoadedProfile(): {
+  data: LoadedProfile | null;
+  failed: boolean;
+  reload: () => void;
+} {
+  const { expire } = useSession();
+  const [data, setData] = useState<LoadedProfile | null>(null);
+  const [failed, setFailed] = useState(false);
+  const reload = useCallback(() => {
+    setFailed(false);
+    Promise.all([
+      profileApi.get(),
+      profileApi.options(),
+      profileApi.destinations(),
+    ])
+      .then(([view, options, destinations]) =>
+        setData({ view, options, destinations }),
+      )
+      .catch((e) => {
+        if (e instanceof ApiError && e.status === 401) expire();
+        setFailed(true);
+      });
+  }, [expire]);
+  useEffect(() => {
+    // a one-time read of the server's answer
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    reload();
+  }, [reload]);
+  return { data, failed, reload };
 }
 
 export function ProfileView() {
+  const { t } = useT();
+  const router = useRouter();
   const params = useSearchParams();
-  const { state } = useProfile();
+  const { state } = useSession();
+  const { data, failed, reload } = useLoadedProfile();
+  const user = state.status === "authenticated" ? state.user : null;
 
-  if (state.status === "loading") {
+  if (failed) {
     return (
-      <div
-        role="status"
-        aria-busy="true"
-        className="h-72 animate-pulse rounded-xl bg-muted"
-      >
-        <span className="sr-only">Loading your profile…</span>
-      </div>
-    );
-  }
-  if (state.status === "error") {
-    return (
-      <Alert kind="error" title="Your profile could not be loaded">
-        {state.message}
+      <Alert kind="error" title={t("wizard.loadError")}>
+        <Button type="button" variant="outline" size="sm" onClick={reload}>
+          {t("common.tryAgain")}
+        </Button>
       </Alert>
     );
   }
-  const p = state.profile;
-  return (
-    <div className="grid gap-5">
-      {params.get("saved") ? (
-        <Alert kind="success">Your profile was saved.</Alert>
-      ) : null}
-      <div>
-        <Button asChild>
-          <Link href="/profile/edit">Edit profile</Link>
-        </Button>
+  if (!data) {
+    return (
+      <div role="status" aria-busy="true" className="grid gap-4">
+        <span className="sr-only">{t("wizard.loading")}</span>
+        <div aria-hidden className="h-28 animate-pulse rounded-xl bg-muted" />
+        <div aria-hidden className="h-64 animate-pulse rounded-xl bg-muted" />
       </div>
-      <Section title="About your studies">
-        <Row label="Country where you live">
-          {p.currentCountry ? countryLabel(p.currentCountry) : NONE}
-        </Row>
-        <Row label="University">{p.currentUniversity ?? NONE}</Row>
-        <Row label="Current level">
-          {p.currentDegreeLevel ? LEVEL_LABELS[p.currentDegreeLevel] : NONE}
-        </Row>
-        <Row label="Field of study">{p.fieldOfStudy ?? NONE}</Row>
-        <Row label="Grade">
-          {p.gpa != null && p.gpaScaleMax != null
-            ? `${p.gpa} out of ${p.gpaScaleMax}`
-            : NONE}
-        </Row>
-      </Section>
-      <Section title="Language qualifications">
-        {p.languageQualifications.length === 0 ? (
-          <Row label="Tests">{NONE}</Row>
-        ) : (
-          p.languageQualifications.map((q) => (
-            <Row
-              key={q.test}
-              label={
-                q.test === "OTHER"
-                  ? (q.testName ?? "Other test")
-                  : TEST_LABELS[q.test].split(" (")[0]
-              }
-            >
-              Overall {q.overall}
-            </Row>
-          ))
-        )}
-      </Section>
-      <Section title="Your plans">
-        <Row label="Degree you are aiming for">
-          {p.targetDegreeLevel ? TARGET_LABELS[p.targetDegreeLevel] : NONE}
-        </Row>
-        <Row label="Preferred intake">
-          {p.intakeSeason && p.intakeYear
-            ? `${SEASON_LABELS[p.intakeSeason]} ${p.intakeYear}`
-            : NONE}
-        </Row>
-        <Row label="Preferred destinations">
-          {p.preferredDestinations.length
-            ? p.preferredDestinations.map((c) => countryLabel(c)).join(", ")
-            : NONE}
-        </Row>
-        <Row label="Yearly tuition budget">{money(p)}</Row>
-      </Section>
-      <p className="text-sm text-muted-foreground">
-        This information is only used to show you your own options. It is never
-        turned into a score or an admission chance, and you can export or delete
-        it in{" "}
-        <Link href="/settings" className="font-semibold underline">
-          Settings
-        </Link>
-        .
-      </p>
+    );
+  }
+
+  const { view, options, destinations } = data;
+  const profile = view.profile;
+  const completed = profile.onboarding.status === "COMPLETED";
+  const ctx = { options, destinations };
+  const incomplete: Problems = {};
+  STEPS.slice(0, -1).forEach((s) =>
+    Object.assign(incomplete, validateStep(s, profile, ctx)),
+  );
+  const resumeStep =
+    Math.min(Math.max(profile.onboarding.step, 0), STEPS.length - 1) + 1;
+
+  return (
+    <div className="grid gap-6">
+      {params.get("done") ? (
+        <Alert kind="success" title={t("profile.doneTitle")}>
+          {t("profile.doneBody")}
+        </Alert>
+      ) : null}
+
+      <section className="flex flex-wrap items-center gap-5 card p-6">
+        <Avatar
+          present={view.avatar.present}
+          version={view.avatar.version}
+          name={user?.displayName ?? undefined}
+        />
+        <div className="min-w-0 flex-1">
+          <h2 className="truncate text-xl font-bold">
+            {user?.displayName || user?.email}
+          </h2>
+          <p className="truncate text-sm text-muted-foreground">
+            {user?.email}
+          </p>
+          <p className="mt-2 text-sm font-medium">
+            {completed ? t("profile.complete") : t("profile.incomplete")}
+          </p>
+        </div>
+        <Button asChild>
+          <Link href={`/profile/edit?step=${completed ? 1 : resumeStep}`}>
+            {completed
+              ? t("profile.edit")
+              : profile.onboarding.status === "NOT_STARTED"
+                ? t("profile.start")
+                : t("profile.continue")}
+          </Link>
+        </Button>
+      </section>
+
+      {!completed ? (
+        <Alert kind="info" title={t("profile.finishTitle")}>
+          {t("profile.finishBody")}
+        </Alert>
+      ) : null}
+
+      {view.legacy ? (
+        <Alert kind="info" title={t("profile.legacyTitle")}>
+          {t("profile.legacyBody")}
+        </Alert>
+      ) : null}
+
+      <ReviewStep
+        props={{
+          draft: profile,
+          update: () => {},
+          options,
+          destinations,
+          problems: {},
+        }}
+        incomplete={completed ? {} : incomplete}
+        onEdit={(step) =>
+          router.push(`/profile/edit?step=${STEPS.indexOf(step) + 1}`)
+        }
+      />
     </div>
   );
 }

@@ -6,7 +6,8 @@ import { Bookmark, BookmarkCheck } from "lucide-react";
 import { useState } from "react";
 import { useSession } from "@/components/account/session-provider";
 import { Button } from "@/components/ui/button";
-import { describeError } from "@/lib/account/errors";
+import { useErrorText } from "@/lib/account/errors";
+import { useT } from "@/lib/i18n";
 import { useSaved } from "./saved-provider";
 
 /** Save or unsave a program or a university. Visitors are invited to log in; a failure is shown, never swallowed. */
@@ -17,6 +18,8 @@ export function SaveButton({
   kind: "program" | "university";
   id: string;
 }) {
+  const { t } = useT();
+  const { describe } = useErrorText();
   const { state } = useSession();
   const saved = useSaved();
   const pathname = usePathname();
@@ -34,7 +37,7 @@ export function SaveButton({
         <Link
           href={`/login?next=${encodeURIComponent(pathname)}&reason=required`}
         >
-          <Bookmark aria-hidden /> Log in to save
+          <Bookmark aria-hidden /> {t("save.login")}
         </Link>
       </Button>
     );
@@ -50,7 +53,7 @@ export function SaveButton({
         ? saved.toggleProgram(id)
         : saved.toggleUniversity(id));
     } catch (e) {
-      setError(describeError(e));
+      setError(describe(e));
     } finally {
       setPending(false);
     }
@@ -67,7 +70,7 @@ export function SaveButton({
         disabled={pending || !saved.ready}
         onClick={toggle}
       >
-        <Icon aria-hidden /> {isSaved ? "Saved" : "Save"}
+        <Icon aria-hidden /> {isSaved ? t("save.saved") : t("save.save")}
       </Button>
       {error ? (
         <p role="alert" className="text-sm font-medium text-danger">

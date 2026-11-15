@@ -25,6 +25,8 @@ const SESSION_COOKIE = "PATHWAY_SESSION";
 // run longer than the upstream wait (Fluid Compute on the Hobby plan allows it), otherwise the platform would cut the request first.
 const UPSTREAM_TIMEOUT_MS = 130_000;
 const MAX_BODY_BYTES = 64 * 1024;
+// the profile picture is the one binary body: a small JPEG prepared in the browser (the server re-encodes it again)
+const MAX_AVATAR_BYTES = 420 * 1024;
 
 type Ctx = { params: Promise<{ path: string[] }> };
 
@@ -105,8 +107,28 @@ async function forward(request: Request, { params }: Ctx): Promise<Response> {
     return problem(401, "Please log in.", "UNAUTHENTICATED");
   }
 
+  const isAvatar =
+    path.length === 2 && path[0] === "account" && path[1] === "avatar";
+  let bytes: ArrayBuffer | undefined;
   let body: string | undefined;
-  if (isWrite) {
+  if (isWrite && isAvatar && request.method === "PUT") {
+    const type = (request.headers.get("content-type") ?? "")
+      .split(";")[0]
+      .trim()
+      .toLowerCase();
+    if (type !== "image/jpeg" && type !== "image/png") {
+      return problem(
+        415,
+        "Only JPEG and PNG pictures are accepted.",
+        "AVATAR_TYPE",
+      );
+    }
+    if (Number(request.headers.get("content-length") ?? "0") > MAX_AVATAR_BYTES)
+      return problem(413, "The picture is too large.", "AVATAR_TOO_LARGE");
+    bytes = await request.arrayBuffer();
+    if (bytes.byteLength > MAX_AVATAR_BYTES)
+      return problem(413, "The picture is too large.", "AVATAR_TOO_LARGE");
+  } else if (isWrite) {
     const declared = Number(request.headers.get("content-length") ?? "0");
     if (declared > MAX_BODY_BYTES)
       return problem(413, "The request is too large.");
@@ -116,10 +138,17 @@ async function forward(request: Request, { params }: Ctx): Promise<Response> {
   }
 
   const target = `${origin}/api/v1/${path.join("/")}${new URL(request.url).search}`;
-  const headers: Record<string, string> = { Accept: "application/json" };
+  const headers: Record<string, string> = {
+    Accept: isAvatar && !isWrite ? "image/*" : "application/json",
+  };
   const ifNoneMatch = request.headers.get("if-none-match");
   if (ifNoneMatch && !isWrite) headers["If-None-Match"] = ifNoneMatch;
-  if (body !== undefined && body.length > 0)
+  if (bytes !== undefined)
+    headers["Content-Type"] = request.headers
+      .get("content-type")!
+      .split(";")[0]
+      .trim();
+  else if (body !== undefined && body.length > 0)
     headers["Content-Type"] = "application/json";
   if (cookie) headers.Cookie = cookie;
   const key = process.env.API_STAGING_KEY;
@@ -132,7 +161,7 @@ async function forward(request: Request, { params }: Ctx): Promise<Response> {
     upstream = await fetch(target, {
       method: request.method,
       headers,
-      body: body && body.length > 0 ? body : undefined,
+      body: bytes ?? (body && body.length > 0 ? body : undefined),
       cache: "no-store",
       redirect: "error",
       signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
@@ -158,7 +187,12 @@ async function forward(request: Request, { params }: Ctx): Promise<Response> {
   out.set(
     "Cache-Control",
     area === "account"
-      ? "no-store"
+      ? isAvatar &&
+        !isWrite &&
+        upstream.status === 200 &&
+        new URL(request.url).searchParams.has("v")
+        ? "private, max-age=86400" // a picture URL carries its version, so a changed picture is a new URL
+        : "no-store"
       : cacheControl
         ? cacheControl.replace(/\bpublic\b/i, "private")
         : "no-store",

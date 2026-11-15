@@ -1,16 +1,21 @@
 "use client";
 
+import Link from "next/link";
+import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { ChoiceGroup } from "@/components/ui/choice-group";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { accountApi } from "@/lib/account/api";
-import { describeError, fieldErrors } from "@/lib/account/errors";
+import { useErrorText } from "@/lib/account/errors";
 import { useAccountConfig } from "@/lib/account/use-account-config";
 import type { Account } from "@/lib/account/types";
 import { ApiError } from "@/lib/api/client";
+import { useT, type Lang } from "@/lib/i18n";
+import { profileApi } from "@/lib/profile/api";
 import { useSession } from "./session-provider";
 
 type Notice = { kind: "success" | "error"; text: string } | null;
@@ -35,7 +40,88 @@ function Card({
   );
 }
 
+const subscribe = () => () => {};
+
+/** System follows the operating system and keeps following it; Light and Dark are explicit choices that are remembered in this browser. */
+function AppearanceCard() {
+  const { t } = useT();
+  const { theme, setTheme } = useTheme();
+  // the stored theme is only known on the client
+  const mounted = useSyncExternalStore(
+    subscribe,
+    () => true,
+    () => false,
+  );
+  return (
+    <Card
+      title={t("settings.appearance")}
+      description={t("settings.appearanceHelp")}
+    >
+      <ChoiceGroup<"system" | "light" | "dark">
+        name="theme"
+        label={t("settings.theme")}
+        value={
+          mounted
+            ? ((theme as "system" | "light" | "dark" | undefined) ?? "system")
+            : null
+        }
+        columns={3}
+        onChange={setTheme}
+        choices={[
+          {
+            value: "system",
+            label: t("settings.themeSystem"),
+            description: t("settings.themeSystemHelp"),
+          },
+          { value: "light", label: t("settings.themeLight") },
+          { value: "dark", label: t("settings.themeDark") },
+        ]}
+      />
+    </Card>
+  );
+}
+
+function LanguageCard({ signedIn }: { signedIn: boolean }) {
+  const { t, lang, setLang } = useT();
+  const [failed, setFailed] = useState(false);
+  async function choose(next: Lang) {
+    setLang(next);
+    setFailed(false);
+    if (!signedIn) return;
+    try {
+      await profileApi.setLanguage(next);
+    } catch {
+      setFailed(true); // the choice still works in this browser
+    }
+  }
+  return (
+    <Card
+      title={t("settings.language")}
+      description={t("settings.languageHelp")}
+    >
+      <ChoiceGroup<Lang>
+        name="language"
+        label={t("settings.languageLabel")}
+        value={lang}
+        columns={2}
+        onChange={choose}
+        choices={[
+          { value: "en", label: "English" },
+          { value: "ru", label: "Русский" },
+        ]}
+      />
+      {failed ? (
+        <p className="mt-3 text-sm text-muted-foreground">
+          {t("settings.languageNotSynced")}
+        </p>
+      ) : null}
+    </Card>
+  );
+}
+
 function AccountCard({ user }: { user: Account }) {
+  const { t } = useT();
+  const { describe } = useErrorText();
   const { refresh } = useSession();
   const { config } = useAccountConfig();
   const [name, setName] = useState(user.displayName ?? "");
@@ -49,9 +135,9 @@ function AccountCard({ user }: { user: Account }) {
     try {
       await accountApi.updateDisplayName(name);
       await refresh();
-      setNotice({ kind: "success", text: "Your name was saved." });
+      setNotice({ kind: "success", text: t("settings.nameSaved") });
     } catch (e) {
-      setNotice({ kind: "error", text: describeError(e) });
+      setNotice({ kind: "error", text: describe(e) });
     } finally {
       setPending(false);
     }
@@ -61,44 +147,47 @@ function AccountCard({ user }: { user: Account }) {
     setNotice(null);
     try {
       await accountApi.resendVerification(user.email);
-      setNotice({
-        kind: "success",
-        text: "If your address is not confirmed yet, we sent a new link.",
-      });
+      setNotice({ kind: "success", text: t("settings.verificationSent") });
     } catch (e) {
-      setNotice({ kind: "error", text: describeError(e) });
+      setNotice({ kind: "error", text: describe(e) });
     }
   }
 
   return (
-    <Card title="Account">
+    <Card title={t("settings.account")}>
       {notice ? (
         <Alert kind={notice.kind} className="mb-4">
           {notice.text}
         </Alert>
       ) : null}
       <dl className="grid gap-1 pb-4 text-sm sm:grid-cols-[10rem_1fr]">
-        <dt className="font-semibold text-muted-foreground">Email address</dt>
+        <dt className="font-semibold text-muted-foreground">
+          {t("settings.email")}
+        </dt>
         <dd>
           {user.email}{" "}
           <span className="text-muted-foreground">
-            ({user.emailVerified ? "confirmed" : "not confirmed"})
+            (
+            {user.emailVerified
+              ? t("settings.confirmed")
+              : t("settings.notConfirmed")}
+            )
           </span>
         </dd>
       </dl>
       {!user.emailVerified ? (
         config?.emailDeliveryAvailable ? (
           <Button variant="outline" size="sm" className="mb-4" onClick={resend}>
-            Send a confirmation email
+            {t("settings.sendConfirmation")}
           </Button>
         ) : (
           <p className="mb-4 text-sm text-muted-foreground">
-            Email confirmation is not switched on yet.
+            {t("settings.confirmationOff")}
           </p>
         )
       ) : null}
       <form onSubmit={saveName} className="grid max-w-md gap-3">
-        <Field id="displayName" label="Name" optional>
+        <Field id="displayName" label={t("bg.name")} optional>
           {(p) => (
             <Input
               {...p}
@@ -110,7 +199,7 @@ function AccountCard({ user }: { user: Account }) {
         </Field>
         <div>
           <Button type="submit" disabled={pending}>
-            {pending ? "Saving…" : "Save name"}
+            {pending ? t("common.saving") : t("settings.saveName")}
           </Button>
         </div>
       </form>
@@ -119,6 +208,8 @@ function AccountCard({ user }: { user: Account }) {
 }
 
 function PasswordCard() {
+  const { t } = useT();
+  const { describe, fields } = useErrorText();
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -134,14 +225,11 @@ function PasswordCard() {
       await accountApi.changePassword(current, next);
       setCurrent("");
       setNext("");
-      setNotice({
-        kind: "success",
-        text: "Your password was changed. Other devices were logged out.",
-      });
+      setNotice({ kind: "success", text: t("settings.passwordChanged") });
     } catch (e) {
-      const fields = fieldErrors(e);
-      if (Object.keys(fields).length) setErrors(fields);
-      else setNotice({ kind: "error", text: describeError(e) });
+      const f = fields(e);
+      if (Object.keys(f).length) setErrors(f);
+      else setNotice({ kind: "error", text: describe(e) });
     } finally {
       setPending(false);
     }
@@ -149,8 +237,8 @@ function PasswordCard() {
 
   return (
     <Card
-      title="Password"
-      description="Changing it logs you out on every other device."
+      title={t("settings.password")}
+      description={t("settings.passwordHelp")}
     >
       {notice ? (
         <Alert kind={notice.kind} className="mb-4">
@@ -158,7 +246,7 @@ function PasswordCard() {
         </Alert>
       ) : null}
       <form onSubmit={submit} className="grid max-w-md gap-4">
-        <Field id="currentPassword" label="Current password">
+        <Field id="currentPassword" label={t("settings.currentPassword")}>
           {(p) => (
             <Input
               {...p}
@@ -172,8 +260,8 @@ function PasswordCard() {
         </Field>
         <Field
           id="newPassword"
-          label="New password"
-          hint="At least 10 characters."
+          label={t("settings.newPassword")}
+          hint={t("auth.passwordHintShort")}
           error={errors.newPassword}
         >
           {(p) => (
@@ -189,7 +277,7 @@ function PasswordCard() {
         </Field>
         <div>
           <Button type="submit" disabled={pending}>
-            {pending ? "Saving…" : "Change password"}
+            {pending ? t("common.saving") : t("settings.changePassword")}
           </Button>
         </div>
       </form>
@@ -198,6 +286,8 @@ function PasswordCard() {
 }
 
 function DataCard() {
+  const { t } = useT();
+  const { describe } = useErrorText();
   const router = useRouter();
   const { expire } = useSession();
   const [notice, setNotice] = useState<Notice>(null);
@@ -216,7 +306,7 @@ function DataCard() {
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {
-      setNotice({ kind: "error", text: describeError(e) });
+      setNotice({ kind: "error", text: describe(e) });
     }
   }
 
@@ -224,12 +314,9 @@ function DataCard() {
     try {
       await accountApi.clearProfile();
       setConfirmClear(false);
-      setNotice({
-        kind: "success",
-        text: "Your profile details were removed. Your account is unchanged.",
-      });
+      setNotice({ kind: "success", text: t("settings.profileCleared") });
     } catch (e) {
-      setNotice({ kind: "error", text: describeError(e) });
+      setNotice({ kind: "error", text: describe(e) });
     }
   }
 
@@ -238,7 +325,7 @@ function DataCard() {
       await accountApi.logoutEverywhere();
     } catch (e) {
       if (!(e instanceof ApiError && e.status === 401)) {
-        setNotice({ kind: "error", text: describeError(e) });
+        setNotice({ kind: "error", text: describe(e) });
         return;
       }
     }
@@ -247,32 +334,35 @@ function DataCard() {
   }
 
   return (
-    <Card title="Your data" description="You decide what Pathway AI keeps.">
+    <Card title={t("settings.privacy")} description={t("settings.privacyHelp")}>
       {notice ? (
         <Alert kind={notice.kind} className="mb-4">
           {notice.text}
         </Alert>
       ) : null}
+      <p className="mb-4 text-sm text-muted-foreground">
+        {t("settings.trainingNote")}
+      </p>
       <div className="flex flex-wrap gap-3">
         <Button variant="outline" onClick={exportData}>
-          Download my data
+          {t("settings.download")}
         </Button>
         {confirmClear ? (
           <>
             <Button variant="outline" onClick={clearProfile}>
-              Yes, remove my profile details
+              {t("settings.confirmClear")}
             </Button>
             <Button variant="outline" onClick={() => setConfirmClear(false)}>
-              Cancel
+              {t("common.cancel")}
             </Button>
           </>
         ) : (
           <Button variant="outline" onClick={() => setConfirmClear(true)}>
-            Clear my profile
+            {t("settings.clear")}
           </Button>
         )}
         <Button variant="outline" onClick={logoutEverywhere}>
-          Log out on all devices
+          {t("settings.logoutAll")}
         </Button>
       </div>
     </Card>
@@ -280,6 +370,8 @@ function DataCard() {
 }
 
 function DeleteCard() {
+  const { t } = useT();
+  const { describe } = useErrorText();
   const router = useRouter();
   const { expire } = useSession();
   const [open, setOpen] = useState(false);
@@ -296,25 +388,27 @@ function DeleteCard() {
       expire(true);
       router.replace("/login?reason=deleted");
     } catch (e) {
-      setError(describeError(e));
+      setError(describe(e));
       setPending(false);
     }
   }
 
   return (
     <section
-      aria-label="Delete account"
+      aria-label={t("settings.deleteAccount")}
       className="rounded-xl border border-danger/40 p-6"
     >
-      <h2 className="text-lg font-bold">Delete your account</h2>
+      <h2 className="text-lg font-bold">{t("settings.deleteTitle")}</h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        This removes your account, your profile, your saved items and every
-        active session. It cannot be undone.
+        {t("settings.deleteHelp")}
       </p>
       {open ? (
         <form onSubmit={submit} className="mt-4 grid max-w-md gap-4">
           {error ? <Alert kind="error">{error}</Alert> : null}
-          <Field id="deletePassword" label="Enter your password to confirm">
+          <Field
+            id="deletePassword"
+            label={t("settings.deleteConfirmPassword")}
+          >
             {(p) => (
               <Input
                 {...p}
@@ -332,14 +426,14 @@ function DeleteCard() {
               disabled={pending || !password}
               className="bg-danger text-white hover:bg-danger/90"
             >
-              {pending ? "Deleting…" : "Delete my account permanently"}
+              {pending ? t("settings.deleting") : t("settings.deleteForever")}
             </Button>
             <Button
               type="button"
               variant="outline"
               onClick={() => setOpen(false)}
             >
-              Cancel
+              {t("common.cancel")}
             </Button>
           </div>
         </form>
@@ -349,20 +443,40 @@ function DeleteCard() {
           className="mt-4 border-danger/50 text-danger"
           onClick={() => setOpen(true)}
         >
-          Delete account…
+          {t("settings.deleteOpen")}
         </Button>
       )}
     </section>
   );
 }
 
-export function SettingsView({ user }: { user: Account }) {
+/** Appearance and language work for everyone (they only change this browser); the account, privacy and deletion cards need a session. */
+export function SettingsView() {
+  const { t } = useT();
+  const { state } = useSession();
+  const user = state.status === "authenticated" ? state.user : null;
   return (
-    <div className="grid max-w-3xl gap-5">
-      <AccountCard user={user} />
-      <PasswordCard />
-      <DataCard />
-      <DeleteCard />
+    <div className="grid max-w-3xl gap-6">
+      <AppearanceCard />
+      <LanguageCard signedIn={!!user} />
+      {user ? (
+        <>
+          <AccountCard user={user} />
+          <PasswordCard />
+          <DataCard />
+          <DeleteCard />
+        </>
+      ) : state.status === "anonymous" ? (
+        <Alert kind="info" title={t("settings.loginTitle")}>
+          {t("settings.loginBody")}{" "}
+          <Link
+            href="/login?next=%2Fsettings"
+            className="font-semibold underline"
+          >
+            {t("auth.login")}
+          </Link>
+        </Alert>
+      ) : null}
     </div>
   );
 }
