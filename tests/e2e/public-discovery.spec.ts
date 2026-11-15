@@ -254,3 +254,57 @@ test.describe("quality", () => {
     });
   }
 });
+
+test.describe("no dead ends and saved universities persist", () => {
+  test("a protected program page links back to the university and its official site", async ({
+    page,
+  }) => {
+    await mockAccountApi(page);
+    await mockPublic(page);
+    await page.goto("/programs/synthetic-fi-a--synthetic-program");
+    await expect(
+      page.getByText("The university catalogue is in a protected beta"),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "View Synthetic University of Alpha" }),
+    ).toHaveAttribute("href", "/universities/synthetic-fi-a");
+    await expect(
+      page.getByRole("link", { name: "Official website" }),
+    ).toHaveAttribute("href", "https://example.test/alpha");
+    await expect(
+      page.getByRole("link", { name: "Log in" }).last(),
+    ).toHaveAttribute("href", /next=%2Funiversities%2Fsynthetic-fi-a/);
+  });
+
+  test("an ordinary account saves universities and finds them after logging out and in", async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(isMobile, "the account menu is a desktop control");
+    const api = await mockAccountApi(page);
+    api.accounts.push({
+      id: "s2",
+      email: "ordinary@example.test",
+      password: "synthetic-pass-phrase-1",
+      displayName: "Ola",
+    });
+    await mockPublic(page);
+    await page.goto("/login?next=%2Funiversities");
+    await page.getByLabel("Email address").fill("ordinary@example.test");
+    await page.getByLabel("Password").fill("synthetic-pass-phrase-1");
+    await page.locator("main form button[type=submit]:visible").first().click();
+    await expect(page).toHaveURL(/\/universities$/);
+    await page.goto("/universities/synthetic-fi-a");
+    await page.getByRole("button", { name: "Save" }).click();
+    await expect(page.getByRole("button", { name: "Saved" })).toBeVisible();
+    await page.getByRole("button", { name: "Account menu" }).click();
+    await page.getByRole("menuitem", { name: "Log out" }).click();
+    await expect(page).toHaveURL("http://localhost:3100/", { timeout: 20_000 });
+    await page.goto("/login?next=%2Fsaved");
+    await page.getByLabel("Email address").fill("ordinary@example.test");
+    await page.getByLabel("Password").fill("synthetic-pass-phrase-1");
+    await page.locator("main form button[type=submit]:visible").first().click();
+    await expect(page).toHaveURL(/\/saved/);
+    await expect(page.getByText("Synthetic University").first()).toBeVisible();
+  });
+});

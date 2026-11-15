@@ -75,7 +75,10 @@ export function ProgramDetailView() {
   if (state.status === "error" && isGateStatus(state.error.status)) {
     return (
       <Shell>
-        <CatalogueProtected status={state.error.status} />
+        <CatalogueProtected
+          status={state.error.status}
+          universitySlug={identifier?.split("--")[0]}
+        />
       </Shell>
     );
   }

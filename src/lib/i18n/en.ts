@@ -363,6 +363,11 @@ export const en = {
   "save.login": "Log in to save",
   "save.save": "Save",
   "save.saved": "Saved",
+  "pub.welcomeTitle": "Your profile is ready",
+  "pub.welcomeBody":
+    "Explore the universities below and save the ones you like. They are kept in your account.",
+  "catalogue.viewUniversity": "View {name}",
+  "catalogue.viewUniversityGeneric": "View the university",
   "catalogue.title": "The university catalogue is in a protected beta",
   "catalogue.signedIn":
     "It is open only to invited accounts while we confirm the terms for reusing the official data. Your account is not on the list yet; your profile works as normal.",
