@@ -24,6 +24,8 @@ export default defineConfig({
     // backend is needed. A stale server on this port would have been built without it.
     env: {
       NEXT_PUBLIC_API_BASE_URL: "http://api.pathway.test",
+      // a short bound so the tests can prove that a request which never answers ends (production waits 140 s for cold starts)
+      NEXT_PUBLIC_API_TIMEOUT_MS: "6000",
     },
     reuseExistingServer: !process.env.CI,
     timeout: 240_000,

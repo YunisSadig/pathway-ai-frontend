@@ -22,6 +22,7 @@ const BY_CODE: Record<string, Key> = {
 /** A message that is safe and useful to show, in the visitor's language: known reasons by code, the status otherwise. */
 export function describeErrorWith(t: T, error: unknown): string {
   if (error instanceof ApiError) {
+    if (error.code === "TIMEOUT") return t("err.timeout");
     if (error.status === 0) return t("err.network");
     if (error.code && BY_CODE[error.code]) return t(BY_CODE[error.code]);
     if (error.status === 429) return t("err.TOO_MANY_ATTEMPTS");
