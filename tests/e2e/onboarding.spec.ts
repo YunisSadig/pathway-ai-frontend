@@ -495,7 +495,7 @@ test.describe("profile picture", () => {
     await page.getByRole("slider", { name: "Zoom" }).fill("2");
     await page.getByRole("button", { name: "Save picture" }).click();
     await expect(
-      page.getByRole("img", { name: /Profile picture/ }),
+      page.getByRole("main").getByRole("img", { name: /Profile picture/ }),
     ).toBeVisible();
     expect(api.avatars.get("synthetic-1")).toBe(1);
     await page
@@ -507,6 +507,27 @@ test.describe("profile picture", () => {
       page.getByRole("img", { name: "Default profile picture" }),
     ).toBeVisible();
     expect(api.avatars.size).toBe(0);
+  });
+
+  test("the navigation shows the uploaded picture at once, after a reload, and the initial again once it is removed", async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(isMobile, "the account menu is a desktop control");
+    const api = await signedIn(page);
+    await page.goto("/profile/edit");
+    const menu = page.getByRole("button", { name: "Account menu" });
+    await expect(menu.locator("img")).toHaveCount(0); // no picture yet: the initial
+    await page
+      .locator("input[type=file]")
+      .setInputFiles({ name: "me.png", mimeType: "image/png", buffer: PNG });
+    await page.getByRole("button", { name: "Save picture" }).click();
+    await expect(menu.locator("img")).toHaveCount(1); // bug: used to stay on the letter until logout and login
+    expect(api.avatars.get("synthetic-1")).toBe(1);
+    await page.reload();
+    await expect(menu.locator("img")).toHaveCount(1);
+    await page.getByRole("button", { name: "Remove picture" }).click();
+    await expect(menu.locator("img")).toHaveCount(0);
   });
 
   test("something that is not a picture is refused before it leaves the browser", async ({

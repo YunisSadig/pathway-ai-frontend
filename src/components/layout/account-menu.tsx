@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { DropdownMenu } from "radix-ui";
 import { useSession } from "@/components/account/session-provider";
+import { Avatar } from "@/components/profile/avatar-uploader";
 import { Button } from "@/components/ui/button";
 import { useT, type Key } from "@/lib/i18n";
 
@@ -66,12 +67,21 @@ export function AuthActions() {
         aria-label={t("nav.accountMenu")}
         className="inline-flex h-11 items-center gap-2 rounded-lg border border-border bg-surface pr-1.5 pl-1.5 transition-colors duration-150 hover:bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:pr-2"
       >
-        <span
-          aria-hidden
-          className="grid size-8 place-items-center rounded-md bg-primary-soft text-sm font-bold text-primary-soft-foreground"
-        >
-          {initialOf(user.displayName, user.email)}
-        </span>
+        {user.avatar?.present ? (
+          <Avatar
+            present
+            version={user.avatar.version}
+            name={user.displayName ?? undefined}
+            className="size-8"
+          />
+        ) : (
+          <span
+            aria-hidden
+            className="grid size-8 place-items-center rounded-full bg-primary-soft text-sm font-bold text-primary-soft-foreground"
+          >
+            {initialOf(user.displayName, user.email)}
+          </span>
+        )}
         <span className="hidden max-w-32 truncate text-sm font-semibold sm:block">
           {user.displayName || user.email.split("@")[0]}
         </span>

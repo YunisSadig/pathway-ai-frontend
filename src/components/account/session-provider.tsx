@@ -27,6 +27,8 @@ interface SessionContextValue {
   /** Called by any screen that learns the session ended (a 401 from the API). */
   expire: (deliberate?: boolean) => void;
   logout: () => Promise<void>;
+  /** A picture was uploaded or removed: every screen showing the account's picture updates at once. */
+  setAvatar: (present: boolean, version: number) => void;
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null);
@@ -78,9 +80,19 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const setAvatar = useCallback(
+    (present: boolean, version: number) =>
+      setState((s) =>
+        s.status === "authenticated"
+          ? { ...s, user: { ...s.user, avatar: { present, version } } }
+          : s,
+      ),
+    [],
+  );
+
   const value = useMemo(
-    () => ({ state, refresh, signIn, expire, logout }),
-    [state, refresh, signIn, expire, logout],
+    () => ({ state, refresh, signIn, expire, logout, setAvatar }),
+    [state, refresh, signIn, expire, logout, setAvatar],
   );
   return (
     <SessionContext.Provider value={value}>{children}</SessionContext.Provider>

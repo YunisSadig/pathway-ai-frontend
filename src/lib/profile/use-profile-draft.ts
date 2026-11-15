@@ -63,7 +63,7 @@ function normalise(p: StudentProfile): StudentProfile {
  * failure is shown and never swallowed, and a 401 ends the session on screen. The server stays the authority on what is valid.
  */
 export function useProfileDraft() {
-  const { expire } = useSession();
+  const { expire, setAvatar } = useSession();
   const { setLang } = useT();
   const [load, setLoad] = useState<LoadState>({ status: "loading" });
   const [view, setView] = useState<StudentProfileView | null>(null);
@@ -191,9 +191,13 @@ export function useProfileDraft() {
   }, [flush, expire]);
 
   /** Replaces the view after a change made outside the draft (picture upload). */
-  const refreshAvatar = useCallback((present: boolean, version: number) => {
-    setView((v) => (v ? { ...v, avatar: { present, version } } : v));
-  }, []);
+  const refreshAvatar = useCallback(
+    (present: boolean, version: number) => {
+      setView((v) => (v ? { ...v, avatar: { present, version } } : v));
+      setAvatar(present, version); // the navigation reads the session, not this view
+    },
+    [setAvatar],
+  );
 
   return {
     load,
