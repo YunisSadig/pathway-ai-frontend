@@ -65,9 +65,9 @@ export const en = {
   "pub.lastVerified": "Last verified",
   "pub.notWhole":
     "This is the number of programs Pathway AI keeps current, not everything the university teaches. Always check the official website for the full offering, fees and deadlines.",
-  "pub.programsTitle": "Programs, requirements and fees",
+  "pub.programsTitle": "Fees, deadlines and requirements",
   "pub.programsBody":
-    "Program details open to signed-in beta accounts while the reuse terms of the official data are being confirmed.",
+    "Fees, deadlines and requirements are not shown yet while we confirm the reuse terms of the official data. Use the official website for current details.",
   "home.featuredTitle": "Universities you can explore now",
   "home.featuredHelp":
     "Real institutions Pathway AI tracks today (Finland). The list grows as more official sources are connected.",
@@ -368,6 +368,20 @@ export const en = {
     "Explore the universities below and save the ones you like. They are kept in your account.",
   "catalogue.viewUniversity": "View {name}",
   "catalogue.viewUniversityGeneric": "View the university",
+  "pub.programsList": "Tracked programs",
+  "pubprog.university": "University",
+  "pubprog.level": "Degree level",
+  "pubprog.field": "Field",
+  "pubprog.duration": "Duration",
+  "pubprog.months": "{n} months",
+  "pubprog.languages": "Teaching languages",
+  "pubprog.campus": "Campus city",
+  "pubprog.verified": "Last verified",
+  "pubprog.official": "Official program page",
+  "pubprog.admissions": "Official admissions information",
+  "pubprog.limitsTitle": "Fees, deadlines and requirements",
+  "pubprog.limitsBody":
+    "These details are not shown yet while we confirm the reuse terms of the official data. Check the official program page for current information.",
   "catalogue.title": "The university catalogue is in a protected beta",
   "catalogue.signedIn":
     "It is open only to invited accounts while we confirm the terms for reusing the official data. Your account is not on the list yet; your profile works as normal.",

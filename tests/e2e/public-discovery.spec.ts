@@ -26,6 +26,53 @@ const UNIVERSITIES = [
   },
 ];
 
+const PROGRAMS = [
+  {
+    identifier: "synthetic-fi-a--synthetic-physics",
+    slug: "synthetic-physics",
+    name: "Synthetic Physics",
+    degreeLevel: "MASTER",
+    field: { slug: "physics", name: "Physics" },
+    studyMode: "FULL_TIME",
+    durationMonths: 24,
+    teachingLanguages: ["en"],
+    campusCity: "Alphaville",
+    university: {
+      slug: "synthetic-fi-a",
+      name: "Synthetic University of Alpha",
+      city: "Alphaville",
+      countryCode: "FI",
+      countryName: "Finland",
+    },
+    officialProgramUrl: "https://example.test/alpha/physics",
+    officialAdmissionsUrl: null,
+    officialApplicationUrl: null,
+    verification: { status: "VERIFIED", verifiedOn: "2026-11-01" },
+  },
+  {
+    identifier: "synthetic-fi-a--synthetic-law",
+    slug: "synthetic-law",
+    name: "Synthetic Law",
+    degreeLevel: "BACHELOR",
+    field: { slug: "law", name: "Law" },
+    studyMode: "FULL_TIME",
+    durationMonths: null,
+    teachingLanguages: ["fi"],
+    campusCity: null,
+    university: {
+      slug: "synthetic-fi-a",
+      name: "Synthetic University of Alpha",
+      city: "Alphaville",
+      countryCode: "FI",
+      countryName: "Finland",
+    },
+    officialProgramUrl: null,
+    officialAdmissionsUrl: null,
+    officialApplicationUrl: null,
+    verification: { status: "VERIFIED", verifiedOn: null },
+  },
+];
+
 /** The public API as the backend serves it: identity fields only. Records which protected endpoints the page asks for. */
 async function mockPublic(page: Page, options: { failList?: boolean } = {}) {
   const protectedCalls: string[] = [];
@@ -42,6 +89,45 @@ async function mockPublic(page: Page, options: { failList?: boolean } = {}) {
       });
     },
   );
+  await page.route(new RegExp(`^${API}/api/v1/public/programs`), (route) => {
+    const url = new URL(route.request().url());
+    const id = url.pathname.split("/").pop();
+    if (options.failList && id === "programs")
+      return route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        headers,
+        body: "{}",
+      });
+    if (id && id !== "programs") {
+      const found = PROGRAMS.find((x) => x.identifier === id);
+      return route.fulfill({
+        status: found ? 200 : 404,
+        contentType: "application/json",
+        headers,
+        body: JSON.stringify(found ?? { status: 404 }),
+      });
+    }
+    const q = (url.searchParams.get("q") ?? "").toLowerCase();
+    const level = url.searchParams.get("level");
+    const content = PROGRAMS.filter(
+      (x) =>
+        x.name.toLowerCase().includes(q) &&
+        (!level || x.degreeLevel === level.toUpperCase()),
+    );
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      headers,
+      body: JSON.stringify({
+        content,
+        number: 0,
+        size: 20,
+        totalElements: content.length,
+        totalPages: 1,
+      }),
+    });
+  });
   await page.route(
     new RegExp(`^${API}/api/v1/public/universities`),
     (route) => {
@@ -85,64 +171,85 @@ async function mockPublic(page: Page, options: { failList?: boolean } = {}) {
 }
 
 test.describe("a visitor can explore universities without an account", () => {
-  test("search, cards, details and honest limits, without touching the protected catalogue", async ({
+  test("programs and universities, with their filters, open to a visitor without touching the protected catalogue", async ({
     page,
   }) => {
     await mockAccountApi(page);
     const protectedCalls = await mockPublic(page);
     await page.goto("/universities");
+    // two views: programs (default) and universities
+    await expect(page.getByRole("link", { name: "Programs" })).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Universities" }).first(),
+    ).toBeVisible();
     await expect(page.getByText("What is covered today")).toBeVisible();
-    await expect(page.getByRole("heading", { level: 3 })).toHaveCount(2);
-    await expect(page.getByText("3 programs tracked")).toBeVisible();
+    await expect(page.getByRole("article")).toHaveCount(2);
+    // the existing filters are present; the tuition filter is not offered without access to fee data
     await expect(
-      page.getByText("No program is tracked right now"),
+      page.getByRole("search", { name: "Filter programs" }),
     ).toBeVisible();
-    await expect(
-      page.getByText("Verification date not available"),
-    ).toBeVisible();
-    // no country dropdown full of countries that are not available
-    await expect(page.getByRole("combobox")).toHaveCount(0);
-    await expect(page.getByLabel(/country/i)).toHaveCount(0);
+    await expect(page.getByText("Maximum tuition per year")).toHaveCount(0);
+    const toggle = page.getByRole("button", { name: /^Filters/ });
+    if (await toggle.isVisible()) await toggle.click();
+    await page
+      .getByRole("combobox", { name: "Degree level" })
+      .selectOption("master");
+    await expect(page).toHaveURL(/level=master/);
+    await expect(page.getByRole("article")).toHaveCount(1);
+    await expect(page.getByText("Synthetic Physics").first()).toBeVisible();
 
+    // the universities view
     await page
-      .getByRole("searchbox", { name: "Search universities by name" })
-      .fill("alpha");
-    await page.getByRole("button", { name: "Search" }).click();
-    await expect(page.getByRole("heading", { level: 3 })).toHaveCount(1);
-    await page
-      .getByRole("searchbox", { name: "Search universities by name" })
-      .fill("zzzz");
-    await page.getByRole("button", { name: "Search" }).click();
-    await expect(page.getByText("No university matches")).toBeVisible();
-
-    await page
-      .getByRole("searchbox", { name: "Search universities by name" })
-      .fill("");
-    await page.getByRole("button", { name: "Search" }).click();
-    await page
-      .getByRole("link", { name: "Synthetic University of Alpha" })
+      .getByRole("navigation", { name: "Browse by" })
+      .getByRole("link", { name: "Universities" })
       .click();
-    await expect(page).toHaveURL(/\/universities\/synthetic-fi-a/);
+    await expect(page).toHaveURL(/view=universities/);
+    await expect(
+      page.getByText("Synthetic Beta Institute").first(),
+    ).toBeVisible();
+    expect(protectedCalls).toEqual([]); // browsing never asked for the protected catalogue
+
+    // a program opens to a visitor with its official link and an honest note
+    await page.goto("/programs/synthetic-fi-a--synthetic-physics");
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Synthetic Physics" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: /Official program page/ }),
+    ).toHaveAttribute("href", "https://example.test/alpha/physics");
+    await expect(
+      page
+        .getByText("Fees, deadlines and requirements")
+        .filter({ visible: true })
+        .first(),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "View Synthetic University of Alpha" }),
+    ).toHaveAttribute("href", "/universities/synthetic-fi-a");
+    await expect(page.getByRole("button", { name: "Save" })).toBeVisible();
+  });
+
+  test("a university page lists its tracked programs and states the honest limits", async ({
+    page,
+  }) => {
+    await mockAccountApi(page);
+    await mockPublic(page);
+    await page.goto("/universities/synthetic-fi-a");
     await expect(
       page.getByRole("heading", {
         level: 1,
         name: "Synthetic University of Alpha",
       }),
     ).toBeVisible();
-    const official = page
-      .getByRole("link", { name: /Official website/ })
-      .first();
-    await expect(official).toHaveAttribute(
-      "href",
-      "https://example.test/alpha",
-    );
+    await expect(
+      page.getByRole("link", { name: /Official website/ }).first(),
+    ).toHaveAttribute("href", "https://example.test/alpha");
+    await expect(
+      page.getByRole("link", { name: "Synthetic Physics" }),
+    ).toBeVisible();
     await expect(
       page.getByText("not everything the university teaches"),
     ).toBeVisible();
-    await expect(
-      page.getByText("Program details open to signed-in beta accounts"),
-    ).toBeVisible();
-    expect(protectedCalls).toEqual([]); // a visitor never asked for the protected catalogue
   });
 
   test("an unknown university and a failing service are explained", async ({
@@ -156,9 +263,7 @@ test.describe("a visitor can explore universities without an account", () => {
     await mockAccountApi(failing);
     await mockPublic(failing, { failList: true });
     await failing.goto("/universities");
-    await expect(
-      failing.getByText("The universities could not be loaded"),
-    ).toBeVisible();
+    await expect(failing.getByText("We couldn't load programs")).toBeVisible();
   });
 
   test("the home page offers Explore universities and shows real tracked universities", async ({
@@ -306,5 +411,32 @@ test.describe("no dead ends and saved universities persist", () => {
     await page.locator("main form button[type=submit]:visible").first().click();
     await expect(page).toHaveURL(/\/saved/);
     await expect(page.getByText("Synthetic University").first()).toBeVisible();
+  });
+});
+
+test.describe("an account with an unconfirmed email is not held back", () => {
+  test("the dashboard shows no confirmation warning and says discovery and saving are available", async ({
+    page,
+  }) => {
+    const api = await mockAccountApi(page);
+    api.accounts.push({
+      id: "u9",
+      email: "unconfirmed@example.test",
+      password: "synthetic-pass-phrase-1",
+      displayName: "Una",
+    });
+    await mockPublic(page);
+    await page.goto("/login?next=%2Fdashboard");
+    await page.getByLabel("Email address").fill("unconfirmed@example.test");
+    await page.getByLabel("Password").fill("synthetic-pass-phrase-1");
+    await page.locator("main form button[type=submit]:visible").first().click();
+    await expect(page).toHaveURL(/\/dashboard/);
+    await expect(
+      page.getByText("Your email address is not confirmed"),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("link", { name: /Explore universities/ }).first(),
+    ).toBeVisible();
+    await expect(page.getByText("only to invited accounts")).toHaveCount(0);
   });
 });

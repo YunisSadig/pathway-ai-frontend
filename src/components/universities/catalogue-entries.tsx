@@ -5,10 +5,10 @@ import { Suspense } from "react";
 import { Alert } from "@/components/ui/alert";
 import { LoadingState } from "@/components/shared/loading-state";
 import { DiscoveryExplorer } from "@/components/universities/discovery-explorer";
-import { PublicUniversitiesView } from "@/components/universities/public-universities-view";
 import { PublicUniversityDetail } from "@/components/universities/public-university-detail";
 import { UniversityDetailView } from "@/components/universities/university-detail-view";
 import { useT } from "@/lib/i18n";
+import { CatalogueScopeProvider } from "@/lib/api/catalogue-scope";
 import { useCatalogueMode } from "./catalogue-mode";
 
 /** Shown once after a student first completes their profile (?welcome=1). */
@@ -34,24 +34,26 @@ export function UniversitiesEntry() {
     </Suspense>
   );
   if (mode === "loading") return <LoadingState label={t("pub.loading")} />;
-  if (mode === "public")
-    return (
-      <>
-        {note}
-        <PublicUniversitiesView />
-      </>
-    );
   return (
-    <Suspense
-      fallback={
-        <p className="min-h-[75vh] text-muted-foreground">
-          {t("common.loading")}
-        </p>
-      }
-    >
-      {note}
-      <DiscoveryExplorer />
-    </Suspense>
+    <CatalogueScopeProvider value={mode === "public" ? "public" : "full"}>
+      <Suspense
+        fallback={
+          <p className="min-h-[75vh] text-muted-foreground">
+            {t("common.loading")}
+          </p>
+        }
+      >
+        {note}
+        {mode === "public" ? (
+          <div className="page-container pt-6">
+            <Alert kind="info" title={t("pub.coverageTitle")}>
+              {t("pub.coverageBody")}
+            </Alert>
+          </div>
+        ) : null}
+        <DiscoveryExplorer />
+      </Suspense>
+    </CatalogueScopeProvider>
   );
 }
 

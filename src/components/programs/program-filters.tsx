@@ -1,5 +1,6 @@
 "use client";
 
+import { useCatalogueScope } from "@/lib/api/catalogue-scope";
 import Link from "next/link";
 import { useState } from "react";
 import { ListFilter, Search, X } from "lucide-react";
@@ -129,6 +130,7 @@ function FiltersForm({
   open: boolean;
   setOpen: (next: (v: boolean) => boolean) => void;
 }) {
+  const scope = useCatalogueScope();
   const [q, setQ] = useState(params.q);
   const [max, setMax] = useState(
     params.tuitionMax ? String(params.tuitionMax) : "",
@@ -251,42 +253,44 @@ function FiltersForm({
               ))}
             </select>
           </label>
-          <fieldset className="grid min-w-0 grid-cols-1 gap-1">
-            <legend className="mb-1 text-sm font-medium">
-              Maximum tuition per year
-            </legend>
-            <div className="flex gap-2">
-              <label className="sr-only" htmlFor="tuition-max">
-                Maximum yearly tuition
-              </label>
-              <input
-                id="tuition-max"
-                type="number"
-                inputMode="numeric"
-                min={1}
-                step="any"
-                value={max}
-                onChange={(e) => setMax(e.target.value)}
-                placeholder="e.g. 15000"
-                className={`${controlBase} w-0 min-w-0 flex-1`}
-              />
-              <label className="sr-only" htmlFor="tuition-currency">
-                Currency
-              </label>
-              <select
-                id="tuition-currency"
-                value={currency}
-                onChange={(e) => setCurrency(e.target.value)}
-                className={`${controlBase} w-[5.5rem] shrink-0`}
-              >
-                {CURRENCIES.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </fieldset>
+          {scope === "public" ? null : (
+            <fieldset className="grid min-w-0 grid-cols-1 gap-1">
+              <legend className="mb-1 text-sm font-medium">
+                Maximum tuition per year
+              </legend>
+              <div className="flex gap-2">
+                <label className="sr-only" htmlFor="tuition-max">
+                  Maximum yearly tuition
+                </label>
+                <input
+                  id="tuition-max"
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  step="any"
+                  value={max}
+                  onChange={(e) => setMax(e.target.value)}
+                  placeholder="e.g. 15000"
+                  className={`${controlBase} w-0 min-w-0 flex-1`}
+                />
+                <label className="sr-only" htmlFor="tuition-currency">
+                  Currency
+                </label>
+                <select
+                  id="tuition-currency"
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value)}
+                  className={`${controlBase} w-[5.5rem] shrink-0`}
+                >
+                  {CURRENCIES.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </fieldset>
+          )}
           <label className={label}>
             Sort by
             <select

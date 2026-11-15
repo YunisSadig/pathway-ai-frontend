@@ -23,12 +23,10 @@ import { ExternalLink } from "@/components/shared/fact-ui";
 import { LoadingState } from "@/components/shared/loading-state";
 import { SectionNav } from "@/components/shared/section-nav";
 import { SaveButton } from "@/components/saved/save-button";
-import {
-  CatalogueProtected,
-  isGateStatus,
-} from "@/components/shared/catalogue-protected";
+import { isGateStatus } from "@/components/shared/catalogue-protected";
 import { API_NOT_CONFIGURED } from "@/lib/api/client";
 import { getProgram } from "@/lib/api/programs";
+import { PublicProgramDetail } from "./public-program-detail";
 import {
   byTemporalStatus,
   DEGREE_LABELS,
@@ -75,9 +73,9 @@ export function ProgramDetailView() {
   if (state.status === "error" && isGateStatus(state.error.status)) {
     return (
       <Shell>
-        <CatalogueProtected
+        <PublicProgramDetail
+          identifier={identifier}
           status={state.error.status}
-          universitySlug={identifier?.split("--")[0]}
         />
       </Shell>
     );

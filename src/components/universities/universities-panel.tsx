@@ -11,6 +11,8 @@ import {
   isGateStatus,
 } from "@/components/shared/catalogue-protected";
 import { API_NOT_CONFIGURED } from "@/lib/api/client";
+import { useCatalogueScope } from "@/lib/api/catalogue-scope";
+import { searchPublicUniversities } from "@/lib/api/public-universities";
 import { listUniversities } from "@/lib/api/universities";
 import {
   discoveryHref,
@@ -43,9 +45,14 @@ export function UniversitiesPanel({
     () => toUniversitiesQuery(params, country),
     [params, country],
   );
+  const scope = useCatalogueScope();
   const { state, retry } = useApiQuery<Page<UniversitySummary>>(
-    JSON.stringify(query),
-    (signal) => listUniversities(query, { signal }),
+    `${scope}:${JSON.stringify(query)}`,
+    (signal) =>
+      (scope === "public" ? searchPublicUniversities : listUniversities)(
+        query,
+        { signal },
+      ),
     (page) => Array.isArray(page?.content),
   );
   const home = discoveryHref(base, { view: "universities" });
