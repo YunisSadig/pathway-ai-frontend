@@ -553,7 +553,7 @@ test.describe("language and appearance", () => {
   }) => {
     const api = await signedIn(page);
     await page.goto("/profile/edit");
-    await page.goto("/settings");
+    await page.goto("/settings?section=appearance");
     await page.getByRole("radio", { name: "Русский" }).click();
     await page.goto("/profile/edit");
     await expect(
@@ -570,7 +570,7 @@ test.describe("language and appearance", () => {
     await expect(
       page.getByRole("heading", { level: 2, name: "О вас" }),
     ).toBeVisible(); // remembered across loads
-    await page.goto("/settings");
+    await page.goto("/settings?section=appearance");
     await expect(
       page.getByRole("heading", { name: "Внешний вид" }),
     ).toBeVisible();
@@ -641,7 +641,7 @@ test.describe("quality", () => {
     page,
   }) => {
     await signedIn(page);
-    await page.goto("/settings");
+    await page.goto("/settings?section=appearance");
     await page.getByRole("radio", { name: "Русский" }).click();
     await page.goto("/profile/edit");
     for (const path of ["/profile", "/settings", "/dashboard"]) {

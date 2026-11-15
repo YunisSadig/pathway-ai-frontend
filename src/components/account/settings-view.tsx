@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useTheme } from "next-themes";
-import { useRouter } from "next/navigation";
+import { Avatar } from "@/components/profile/avatar-uploader";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useSyncExternalStore } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,7 @@ import { useErrorText } from "@/lib/account/errors";
 import { useAccountConfig } from "@/lib/account/use-account-config";
 import type { Account } from "@/lib/account/types";
 import { ApiError } from "@/lib/api/client";
-import { useT, type Lang } from "@/lib/i18n";
+import { useT, type Key, type Lang } from "@/lib/i18n";
 import { profileApi } from "@/lib/profile/api";
 import { useSession } from "./session-provider";
 
@@ -119,17 +120,17 @@ function LanguageCard({ signedIn }: { signedIn: boolean }) {
   );
 }
 
-function AccountCard({ user }: { user: Account }) {
+function ProfileCard({ user }: { user: Account }) {
   const { t } = useT();
   const { describe } = useErrorText();
   const { refresh } = useSession();
-  const { config } = useAccountConfig();
   const [name, setName] = useState(user.displayName ?? "");
   const [notice, setNotice] = useState<Notice>(null);
   const [pending, setPending] = useState(false);
 
   async function saveName(event: React.FormEvent) {
     event.preventDefault();
+    if (pending) return;
     setPending(true);
     setNotice(null);
     try {
@@ -142,6 +143,57 @@ function AccountCard({ user }: { user: Account }) {
       setPending(false);
     }
   }
+
+  return (
+    <Card
+      title={t("settings.profileCard")}
+      description={t("settings.profileHelp")}
+    >
+      {notice ? (
+        <Alert kind={notice.kind} className="mb-4">
+          {notice.text}
+        </Alert>
+      ) : null}
+      <div className="mb-5 flex flex-wrap items-center gap-4">
+        <Avatar
+          present={!!user.avatar?.present}
+          version={user.avatar?.version ?? 0}
+          name={user.displayName ?? undefined}
+          className="size-20"
+        />
+        <Button asChild variant="outline" size="sm">
+          <Link href="/profile/edit?step=1">{t("settings.changePicture")}</Link>
+        </Button>
+      </div>
+      <form onSubmit={saveName} className="grid max-w-md gap-3">
+        <Field id="displayName" label={t("bg.name")} optional>
+          {(p) => (
+            <Input
+              {...p}
+              maxLength={80}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          )}
+        </Field>
+        <div className="flex flex-wrap gap-3">
+          <Button type="submit" disabled={pending}>
+            {pending ? t("common.saving") : t("settings.saveName")}
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/profile/edit">{t("settings.editProfile")}</Link>
+          </Button>
+        </div>
+      </form>
+    </Card>
+  );
+}
+
+function EmailCard({ user }: { user: Account }) {
+  const { t } = useT();
+  const { describe } = useErrorText();
+  const { config } = useAccountConfig();
+  const [notice, setNotice] = useState<Notice>(null);
 
   async function resend() {
     setNotice(null);
@@ -160,7 +212,7 @@ function AccountCard({ user }: { user: Account }) {
           {notice.text}
         </Alert>
       ) : null}
-      <dl className="grid gap-1 pb-4 text-sm sm:grid-cols-[10rem_1fr]">
+      <dl className="grid gap-1 text-sm sm:grid-cols-[10rem_1fr]">
         <dt className="font-semibold text-muted-foreground">
           {t("settings.email")}
         </dt>
@@ -177,32 +229,15 @@ function AccountCard({ user }: { user: Account }) {
       </dl>
       {!user.emailVerified ? (
         config?.emailDeliveryAvailable ? (
-          <Button variant="outline" size="sm" className="mb-4" onClick={resend}>
+          <Button variant="outline" size="sm" className="mt-4" onClick={resend}>
             {t("settings.sendConfirmation")}
           </Button>
         ) : (
-          <p className="mb-4 text-sm text-muted-foreground">
+          <p className="mt-4 text-sm text-muted-foreground">
             {t("settings.confirmationOff")}
           </p>
         )
       ) : null}
-      <form onSubmit={saveName} className="grid max-w-md gap-3">
-        <Field id="displayName" label={t("bg.name")} optional>
-          {(p) => (
-            <Input
-              {...p}
-              maxLength={80}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          )}
-        </Field>
-        <div>
-          <Button type="submit" disabled={pending}>
-            {pending ? t("common.saving") : t("settings.saveName")}
-          </Button>
-        </div>
-      </form>
     </Card>
   );
 }
@@ -450,33 +485,80 @@ function DeleteCard() {
   );
 }
 
-/** Appearance and language work for everyone (they only change this browser); the account, privacy and deletion cards need a session. */
+type Section = "profile" | "security" | "appearance";
+const SECTIONS: { id: Section; label: Key }[] = [
+  { id: "profile", label: "settings.secProfile" },
+  { id: "security", label: "settings.secSecurity" },
+  { id: "appearance", label: "settings.secAppearance" },
+];
+
+/**
+ * Three sections, one at a time (the address keeps the choice: ?section=profile|security|appearance). Appearance and language work for
+ * everyone because they only change this browser; Profile and Account & Security need a session. Password management lives only under
+ * Account & Security.
+ */
 export function SettingsView() {
   const { t } = useT();
   const { state } = useSession();
+  const search = useSearchParams();
   const user = state.status === "authenticated" ? state.user : null;
+  const asked = search.get("section");
+  const section: Section =
+    SECTIONS.find((x) => x.id === asked && (user || x.id === "appearance"))
+      ?.id ?? (user ? "profile" : "appearance");
+  const visible = user
+    ? SECTIONS
+    : SECTIONS.filter((x) => x.id === "appearance");
   return (
-    <div className="grid max-w-3xl gap-6">
-      <AppearanceCard />
-      <LanguageCard signedIn={!!user} />
-      {user ? (
-        <>
-          <AccountCard user={user} />
-          <PasswordCard />
-          <DataCard />
-          <DeleteCard />
-        </>
-      ) : state.status === "anonymous" ? (
-        <Alert kind="info" title={t("settings.loginTitle")}>
-          {t("settings.loginBody")}{" "}
+    <div className="grid gap-6 md:grid-cols-[13rem_1fr] md:items-start">
+      <nav
+        aria-label={t("settings.navLabel")}
+        className="flex flex-wrap gap-2 md:sticky md:top-24 md:flex-col md:gap-1"
+      >
+        {visible.map((x) => (
           <Link
-            href="/login?next=%2Fsettings"
-            className="font-semibold underline"
+            key={x.id}
+            href={`/settings?section=${x.id}`}
+            scroll={false}
+            aria-current={section === x.id ? "page" : undefined}
+            className={`inline-flex min-h-11 items-center rounded-lg px-4 text-sm font-semibold transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+              section === x.id
+                ? "bg-primary-soft text-primary-soft-foreground"
+                : "text-muted-foreground hover:bg-hover hover:text-foreground"
+            }`}
           >
-            {t("auth.login")}
+            {t(x.label)}
           </Link>
-        </Alert>
-      ) : null}
+        ))}
+      </nav>
+      <div className="grid max-w-3xl gap-6">
+        {section === "appearance" ? (
+          <>
+            <AppearanceCard />
+            <LanguageCard signedIn={!!user} />
+          </>
+        ) : null}
+        {user && section === "profile" ? <ProfileCard user={user} /> : null}
+        {user && section === "security" ? (
+          <>
+            <EmailCard user={user} />
+            <PasswordCard />
+            <DataCard />
+            <DeleteCard />
+          </>
+        ) : null}
+        {!user && state.status === "anonymous" ? (
+          <Alert kind="info" title={t("settings.loginTitle")}>
+            {t("settings.loginBody")}{" "}
+            <Link
+              href="/login?next=%2Fsettings"
+              className="font-semibold underline"
+            >
+              {t("auth.login")}
+            </Link>
+          </Alert>
+        ) : null}
+      </div>
     </div>
   );
 }

@@ -13,6 +13,7 @@ vi.mock("@/components/account/session-provider", () => ({
 }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 function renderSettings() {

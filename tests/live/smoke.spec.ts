@@ -132,7 +132,7 @@ test("a student can sign up, edit the profile, log out, log in and delete the ac
   await expect(page).toHaveURL(/\/dashboard/);
 
   // delete the throwaway account
-  await page.goto("/settings");
+  await page.goto("/settings?section=security");
   await page.getByRole("button", { name: "Delete account…" }).click();
   await page.getByLabel("Enter your password to confirm").fill(password);
   await page
