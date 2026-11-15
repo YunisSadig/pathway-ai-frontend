@@ -8,7 +8,6 @@ import { Suspense, useState } from "react";
 import { NAV, SITE, type NavItem } from "@/lib/site";
 import { cn } from "@/lib/utils";
 import { AuthActions, MobileAccountLinks } from "./account-menu";
-import { LanguageSwitcher } from "./language-switcher";
 import { useT } from "@/lib/i18n";
 
 /** A path from where you are to where you want to study: two points joined by a curve. */
@@ -124,7 +123,6 @@ export function SiteHeader() {
           <NavLinks className="flex items-center gap-1" />
         </nav>
         <div className="flex items-center gap-2">
-          <LanguageSwitcher />
           <AuthActions />
           <Dialog.Root open={open} onOpenChange={setOpen}>
             <Dialog.Trigger

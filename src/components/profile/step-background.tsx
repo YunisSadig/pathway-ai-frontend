@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import { useSession } from "@/components/account/session-provider";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { ChoiceGroup } from "@/components/ui/choice-group";
 import { Combobox } from "@/components/ui/combobox";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -25,7 +24,7 @@ export function BackgroundStep({
   avatar: { present: boolean; version: number };
   onAvatar: (present: boolean, version: number) => void;
 }) {
-  const { t, lang, setLang } = useT();
+  const { t, lang } = useT();
   const { state, refresh } = useSession();
   const err = useProblemText(problems);
   const user = state.status === "authenticated" ? state.user : null;
@@ -139,23 +138,6 @@ export function BackgroundStep({
           t("bg.citizenshipHint"),
         )}
         {countryField("residence", t("bg.residence"), t("bg.residenceHint"))}
-      </SectionCard>
-
-      <SectionCard title={t("bg.language")} description={t("bg.languageHelp")}>
-        <ChoiceGroup
-          name="websiteLanguage"
-          label={t("bg.languageLabel")}
-          value={lang}
-          columns={2}
-          onChange={(value) => {
-            setLang(value);
-            update((d) => ({ ...d, language: value }));
-          }}
-          choices={[
-            { value: "en", label: "English" },
-            { value: "ru", label: "Русский" },
-          ]}
-        />
       </SectionCard>
     </div>
   );

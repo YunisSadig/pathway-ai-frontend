@@ -5,6 +5,30 @@
  */
 export const en = {
   // ---- common
+  "wizard.requiredNote":
+    "Everything is needed to finish unless it says (optional). If something does not apply to you, choose the answer that says so.",
+  "notice.englishOnly": "This page is available in English only for now.",
+  "hiw.title": "How it works",
+  "hiw.intro":
+    "Pathway AI is built in five stages. Your profile is available now; the catalogue is a protected beta; the rest is planned, not built.",
+  "hiw.scholarships": "About scholarships",
+  "hiw.label.availableNow": "Available now",
+  "hiw.label.inPreparation": "In preparation",
+  "hiw.label.planned": "Planned",
+  "hiw.1.title": "Build your educational profile",
+  "hiw.1.body":
+    "Enter your education, grades on your own scale, experience, exams, preferences and budget. You decide what to share.",
+  "hiw.2.title": "Explore destinations and programs",
+  "hiw.2.body":
+    "Degree programs with requirements, deadlines and fees as published, each with its official source. Open to invited accounts while the data-reuse terms are confirmed.",
+  "hiw.3.title": "Discover scholarships and funding",
+  "hiw.3.body":
+    "Verified scholarship and funding information will be added. Nothing is listed yet.",
+  "hiw.4.title": "Compare opportunities",
+  "hiw.4.body":
+    "Check known requirements and your profile side by side, with unknowns shown as unknown.",
+  "hiw.5.title": "Build your pathway",
+  "hiw.5.body": "Create a primary study plan and a backup plan.",
   "common.cancel": "Cancel",
   "common.remove": "Remove",
   "common.add": "Add",

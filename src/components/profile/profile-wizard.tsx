@@ -237,6 +237,10 @@ export function ProfileWizard() {
         <p className="mt-1 text-muted-foreground">{t(`step.${name}Help`)}</p>
       </div>
 
+      <p className="-mt-3 text-sm text-muted-foreground">
+        {t("wizard.requiredNote")}
+      </p>
+
       {Object.keys(stepProblems).length ? (
         <Alert kind="error" title={t("wizard.fixTitle")}>
           {t("wizard.fixBody")}
