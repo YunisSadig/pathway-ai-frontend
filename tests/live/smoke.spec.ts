@@ -103,7 +103,11 @@ test("a student can sign up, edit the profile, log out, log in and delete the ac
   await page.getByLabel("Amount per year").fill("5000");
   await next();
   await page.getByRole("button", { name: "Finish", exact: true }).click();
-  await expect(page).toHaveURL(/\/profile\?done=1/);
+  // a first completed profile invites the student to explore universities
+  await expect(page).toHaveURL(/\/universities\?welcome=1/);
+  await expect(page.getByText("Your profile is ready")).toBeVisible();
+  // the submitted academic data persisted
+  await page.goto("/profile");
   await expect(page.getByText("Synthetic Smoke School").first()).toBeVisible();
 
   // the session and the profile survive a reload
