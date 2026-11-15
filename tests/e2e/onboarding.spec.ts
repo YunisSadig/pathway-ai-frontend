@@ -126,7 +126,9 @@ test.describe("guided profile", () => {
     await expect(page.getByText("Synthetic School 7")).toBeVisible();
     await expect(page.getByText("4.5 (marks 1–5)")).toBeVisible();
     await page.getByRole("button", { name: "Finish", exact: true }).click();
-    await expect(page).toHaveURL(/\/profile\?done=1/);
+    await expect(page).toHaveURL(/\/universities\?welcome=1/);
+    await expect(page.getByText("Your profile is ready")).toBeVisible();
+    await page.goto("/profile");
     await expect(page.getByText("Profile complete")).toBeVisible();
     // a finished profile does not tell the student to press Finish again
     await expect(
@@ -191,7 +193,7 @@ test.describe("guided profile", () => {
     await page.getByRole("option", { name: /^EUR/ }).click();
     await next(page);
     await page.getByRole("button", { name: "Finish", exact: true }).click();
-    await expect(page).toHaveURL(/\/profile\?done=1/);
+    await expect(page).toHaveURL(/\/universities\?welcome=1/);
     const doc = api.documents.get("synthetic-1") as {
       bachelor: { grade: unknown };
       internships: unknown[];

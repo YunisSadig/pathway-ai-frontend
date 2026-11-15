@@ -153,7 +153,10 @@ export function ProfileWizard() {
     setFinishProblems({});
     const result = await d.complete();
     setFinishing(false);
-    if (result.ok) return router.push("/profile?done=1");
+    if (result.ok)
+      return router.push(
+        completed ? "/profile?done=1" : "/universities?welcome=1",
+      ); // first completion invites exploring; editing returns to the profile
     setFinishProblems(result.problems);
     const first = firstIncompleteStep(d.draft, ctx as NonNullable<typeof ctx>);
     if (first >= 0) {
