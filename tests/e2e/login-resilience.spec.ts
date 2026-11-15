@@ -138,7 +138,7 @@ test.describe("login never leaves the button on 'Logging in…'", () => {
     await page.reload();
     await expect(page).toHaveURL(/\/settings/);
     await expect(
-      page.getByRole("heading", { name: "Account", exact: true }),
+      page.getByRole("heading", { name: "Picture and name", exact: true }),
     ).toBeVisible(); // signed-in card, not the login prompt
     await page.goto("/dashboard");
     await expect(page).toHaveURL(/\/dashboard/);
