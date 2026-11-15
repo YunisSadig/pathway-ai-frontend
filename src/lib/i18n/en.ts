@@ -129,6 +129,11 @@ export const en = {
   "auth.show": "Show",
   "auth.hide": "Hide",
   "auth.loggingIn": "Logging in…",
+  "auth.redirecting": "Taking you to your dashboard…",
+  "auth.slow1":
+    "This is taking a little longer than usual. The service may be waking up after a quiet period, which can take up to two minutes. Please keep this page open.",
+  "auth.slow2":
+    "Still waiting for the service to wake up. Your details have not been lost; you can keep waiting or try again later.",
   "auth.creating": "Creating your account…",
   "auth.createAccount": "Create your account",
   "auth.forgot": "Forgot your password?",
@@ -173,6 +178,8 @@ export const en = {
   "auth.linkFailedHelp": "Log in and request a new one from Settings.",
 
   // ---- errors
+  "err.timeout":
+    "The service is taking too long to answer. It may be waking up after a quiet period. Please try again in a minute.",
   "err.network":
     "The service could not be reached. Check your connection and try again.",
   "err.server": "The service had a problem. Please try again in a moment.",

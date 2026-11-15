@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { accountApi } from "@/lib/account/api";
 import { useErrorText } from "@/lib/account/errors";
 import { useAccountConfig } from "@/lib/account/use-account-config";
+import { useSlowPhase } from "@/lib/account/use-slow-phase";
 import { useT } from "@/lib/i18n";
 import { useSession } from "./session-provider";
 
@@ -19,7 +20,7 @@ export function SignupForm() {
   const { t } = useT();
   const { describe, fields } = useErrorText();
   const router = useRouter();
-  const { refresh } = useSession();
+  const { signIn } = useSession();
   const { config } = useAccountConfig();
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -30,10 +31,12 @@ export function SignupForm() {
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [checkEmail, setCheckEmail] = useState<string | null>(null);
+  const inFlight = useRef(false);
+  const phase = useSlowPhase(pending);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    if (pending) return;
+    if (inFlight.current) return; // a double click never registers twice
     const next: Record<string, string> = {};
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))
       next.email = t("err.invalidEmail");
@@ -44,6 +47,7 @@ export function SignupForm() {
     setFormError(null);
     if (Object.keys(next).length) return;
 
+    inFlight.current = true;
     setPending(true);
     try {
       const result = await accountApi.register({
@@ -51,17 +55,25 @@ export function SignupForm() {
         password,
         displayName: displayName.trim() || undefined,
       });
-      if (result.status === "CHECK_EMAIL") {
+      if (result.status === "CHECK_EMAIL" || !result.account) {
         setCheckEmail(email.trim());
-        setPending(false);
         return;
       }
-      await refresh();
-      router.replace("/dashboard?welcome=1");
+      signIn(result.account);
+      setPassword(""); // not kept once used
+      const target = "/dashboard?welcome=1";
+      router.replace(target);
+      // last resort if the router did not leave this page: a full navigation
+      window.setTimeout(() => {
+        if (window.location.pathname.startsWith("/signup"))
+          window.location.assign(new URL(target, window.location.origin).href);
+      }, 4000);
     } catch (e) {
       const f = fields(e);
       if (Object.keys(f).length) setErrors(f);
       else setFormError(describe(e));
+    } finally {
+      inFlight.current = false;
       setPending(false);
     }
   }
@@ -182,6 +194,13 @@ export function SignupForm() {
       <Button type="submit" size="lg" disabled={pending}>
         {pending ? t("auth.creating") : t("auth.createAccount")}
       </Button>
+      <div role="status" aria-live="polite">
+        {phase > 0 ? (
+          <Alert kind="info">
+            {t(phase === 1 ? "auth.slow1" : "auth.slow2")}
+          </Alert>
+        ) : null}
+      </div>
       {config && !config.emailDeliveryAvailable ? (
         <p className="text-sm text-muted-foreground">{t("auth.noEmailYet")}</p>
       ) : null}

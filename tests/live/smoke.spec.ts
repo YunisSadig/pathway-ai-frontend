@@ -142,3 +142,74 @@ test("a student can sign up, edit the profile, log out, log in and delete the ac
   await page.getByRole("button", { name: "Log in" }).click();
   await expect(page.getByText("Invalid email or password.")).toBeVisible();
 });
+
+test("log in, log out, come back through the Log in link and log in again (the button never sticks on 'Logging in…')", async ({
+  page,
+  request,
+  isMobile,
+}) => {
+  const config = await (await request.get("/api/v1/account/config")).json();
+  test.skip(
+    !config.registrationOpen || config.emailDeliveryAvailable,
+    "needs open registration without email confirmation",
+  );
+  const stamp = `${Date.now()}${Math.floor(Math.random() * 1e6)}`;
+  const email = `pathway-smoke-${stamp}@example.com`;
+  const password = `Smoke-${Math.random().toString(36).slice(2)}-${stamp}`;
+  const origin = new URL(process.env.LIVE_SITE_URL!).origin;
+  const created = await request.post("/api/v1/account/register", {
+    data: { email, password },
+    headers: { origin },
+  });
+  expect(created.status()).toBe(201);
+  await page.context().clearCookies(); // the registration above signed this client in; the browser starts signed out
+
+  const submit = page.locator("main form button[type=submit]:visible").first();
+  const logIn = async () => {
+    await page.getByLabel("Email address").fill(email);
+    await page.getByLabel("Password").fill(password);
+    await submit.click();
+    await expect(page).toHaveURL(/\/dashboard/);
+  };
+  try {
+    await page.goto("/login");
+    await logIn();
+    if (isMobile) {
+      await page.getByRole("button", { name: "Open menu" }).click();
+      await page.getByRole("button", { name: "Log out" }).click();
+    } else {
+      await page.getByRole("button", { name: "Account menu" }).click();
+      await page.getByRole("menuitem", { name: "Log out" }).click();
+    }
+    await expect(page).toHaveURL(
+      new RegExp(`^${origin.replace(/[.]/g, "\.")}/?$`),
+    );
+    if (isMobile) {
+      await page.getByRole("button", { name: "Open menu" }).click();
+      await page
+        .getByRole("dialog")
+        .getByRole("link", { name: "Log in" })
+        .click();
+    } else {
+      await page.getByRole("link", { name: "Log in" }).first().click();
+    }
+    await expect(page).toHaveURL(/\/login/);
+    await expect(submit).toBeEnabled();
+    await expect(submit).toHaveText("Log in");
+    await expect(page.getByLabel("Password")).toHaveValue("");
+    await logIn();
+    await page.reload();
+    await expect(page).toHaveURL(/\/dashboard/); // the session survives a refresh
+  } finally {
+    // a disposable account never outlives its test
+    await page.request
+      .post("/api/v1/account/login", {
+        data: { email, password },
+        headers: { origin },
+      })
+      .catch(() => undefined);
+    await page.request
+      .delete("/api/v1/account", { data: { password }, headers: { origin } })
+      .catch(() => undefined);
+  }
+});

@@ -105,12 +105,14 @@ export function ResetPasswordForm() {
     setErrors({});
     try {
       await accountApi.resetPassword(token, password);
+      setPassword(""); // not kept once used
       router.replace("/login?reason=reset");
     } catch (e) {
       const f = fields(e);
       if (Object.keys(f).length) setErrors(f);
       else setError(describe(e));
-      setPending(false);
+    } finally {
+      setPending(false); // always ends, also when the page is kept mounted by the router
     }
   }
 

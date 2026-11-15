@@ -21,6 +21,10 @@ export interface FakeAccountApi {
   calls: { method: string; path: string; body: unknown }[];
   /** When set, the next call to this path answers with this status. */
   failNext: Map<string, number>;
+  /** Paths whose next call never gets an answer (a hung or sleeping backend). */
+  hang: Set<string>;
+  /** Milliseconds to wait before answering a path (a slow cold start). */
+  delays: Map<string, number>;
   /** Simulates a session that ended on the server. */
   expireSession(): Promise<void>;
   options: { registrationOpen: boolean; emailDeliveryAvailable: boolean };
@@ -166,6 +170,8 @@ export async function mockAccountApi(
     current: null,
     calls: [],
     failNext: new Map(),
+    hang: new Set(),
+    delays: new Map(),
     options: {
       registrationOpen: true,
       emailDeliveryAvailable: false,
@@ -235,6 +241,12 @@ export async function mockAccountApi(
         body = undefined;
       }
       state.calls.push({ method, path, body });
+      if (state.hang.has(path)) {
+        state.hang.delete(path);
+        return new Promise<void>(() => {});
+      }
+      const wait = state.delays.get(path);
+      if (wait) await new Promise((resolve) => setTimeout(resolve, wait));
       const failure = state.failNext.get(path);
       if (failure) {
         state.failNext.delete(path);

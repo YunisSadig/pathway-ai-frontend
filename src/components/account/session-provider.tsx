@@ -22,6 +22,8 @@ interface SessionContextValue {
   state: SessionState;
   /** Re-reads the session from the server (after login, profile name change, ...). */
   refresh: () => Promise<void>;
+  /** Sets the signed-in state from the account the login/registration response already returned (no extra round trip to wait on). */
+  signIn: (user: Account) => void;
   /** Called by any screen that learns the session ended (a 401 from the API). */
   expire: (deliberate?: boolean) => void;
   logout: () => Promise<void>;
@@ -52,6 +54,11 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     void refresh();
   }, [refresh]);
 
+  const signIn = useCallback(
+    (user: Account) => setState({ status: "authenticated", user }),
+    [],
+  );
+
   const expire = useCallback(
     (deliberate = false) =>
       setState({
@@ -72,8 +79,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ state, refresh, expire, logout }),
-    [state, refresh, expire, logout],
+    () => ({ state, refresh, signIn, expire, logout }),
+    [state, refresh, signIn, expire, logout],
   );
   return (
     <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
