@@ -82,14 +82,20 @@ test("a student can sign up, edit the profile, log out, log in and delete the ac
   await pick("Country of education", "Azer", "Azerbaijan");
   await page.getByLabel("Current grade").selectOption({ label: "Grade 11" });
   await page.getByLabel("Expected graduation year").selectOption({ index: 2 });
-  await page.getByRole("radio", { name: "Computer Science / Information Technology" }).click();
+  await page
+    .getByRole("radio", { name: "Computer Science / Information Technology" })
+    .click();
   await next();
   await page.getByRole("radio", { name: "Yes, I will enter my grade" }).click();
-  await page.getByLabel("How are your grades reported?").selectOption({ label: "Marks 1–5 (5 is the highest)" });
+  await page
+    .getByLabel("How are your grades reported?")
+    .selectOption({ label: "Marks 1–5 (5 is the highest)" });
   await page.getByLabel("Your grade", { exact: true }).fill("4.5");
   await next();
   await page.getByRole("radio", { name: "No internships yet" }).click();
-  await page.getByRole("radio", { name: "No volunteering experience yet" }).click();
+  await page
+    .getByRole("radio", { name: "No volunteering experience yet" })
+    .click();
   await page.getByRole("radio", { name: "Not taken yet" }).click();
   await next();
   await page.getByRole("radio", { name: "Bachelor's degree" }).click();
@@ -97,7 +103,7 @@ test("a student can sign up, edit the profile, log out, log in and delete the ac
   await page.getByLabel("Amount per year").fill("5000");
   await next();
   await page.getByRole("button", { name: "Finish", exact: true }).click();
-  await expect(page).toHaveURL(//profile?done=1/);
+  await expect(page).toHaveURL(/\/profile\?done=1/);
   await expect(page.getByText("Synthetic Smoke School")).toBeVisible();
 
   // the session and the profile survive a reload
