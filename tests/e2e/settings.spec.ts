@@ -96,3 +96,21 @@ test.describe("settings are organised in three sections", () => {
     });
   }
 });
+
+test("moving between sections and pages does not ask the server who is signed in again", async ({
+  page,
+}) => {
+  await signedIn(page);
+  let asks = 0;
+  page.on("request", (r) => {
+    if (new URL(r.url()).pathname.endsWith("/api/v1/account/me")) asks += 1;
+  });
+  const nav = page.getByRole("navigation", { name: "Settings sections" });
+  await nav.getByRole("link", { name: "Account & Security" }).click();
+  await expect(page).toHaveURL(/section=security/);
+  await nav.getByRole("link", { name: "Appearance" }).click();
+  await expect(page).toHaveURL(/section=appearance/);
+  await nav.getByRole("link", { name: "Profile" }).click();
+  await expect(page).toHaveURL(/section=profile/);
+  expect(asks).toBe(0);
+});

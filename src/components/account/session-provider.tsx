@@ -7,6 +7,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { ApiError } from "@/lib/api/client";
@@ -43,13 +44,20 @@ export const RETRY_DELAYS_MS = [3000, 8000, 20000, 45000, 75000];
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<SessionState>({ status: "loading" });
 
+  // Every change of who is signed in takes a new number; an answer that arrives for an older number is ignored, so a slow
+  // "who am I?" can never undo a login, resurrect a session after log out, or overwrite a newer answer.
+  const generation = useRef(0);
+
   const refresh = useCallback(async () => {
+    const mine = ++generation.current;
     try {
       const user = await accountApi.me();
-      setState({ status: "authenticated", user });
+      if (mine === generation.current)
+        setState({ status: "authenticated", user });
     } catch (error) {
       const unauthenticated = error instanceof ApiError && error.status === 401;
-      setState({ status: "anonymous", serviceError: !unauthenticated });
+      if (mine === generation.current)
+        setState({ status: "anonymous", serviceError: !unauthenticated });
     }
   }, []);
 
@@ -76,7 +84,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     };
     const soon = () => {
       clearTimeout(timer);
-      void refresh();
+      void refresh().then(schedule); // the chain goes on if the API is still unreachable
     };
     schedule();
     window.addEventListener("online", soon);
@@ -87,25 +95,26 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     };
   }, [unavailable, refresh]);
 
-  const signIn = useCallback(
-    (user: Account) => setState({ status: "authenticated", user }),
-    [],
-  );
+  const signIn = useCallback((user: Account) => {
+    generation.current += 1;
+    setState({ status: "authenticated", user });
+  }, []);
 
-  const expire = useCallback(
-    (deliberate = false) =>
-      setState({
-        status: "anonymous",
-        serviceError: false,
-        loggedOut: deliberate,
-      }),
-    [],
-  );
+  const expire = useCallback((deliberate = false) => {
+    generation.current += 1;
+    setState({
+      status: "anonymous",
+      serviceError: false,
+      loggedOut: deliberate,
+    });
+  }, []);
 
   const logout = useCallback(async () => {
+    generation.current += 1; // anything still in flight belongs to the session that is ending
     try {
       await accountApi.logout();
     } finally {
+      generation.current += 1;
       // a deliberate log out: the page that is open must not bounce to the login page before the caller navigates home
       setState({ status: "anonymous", serviceError: false, loggedOut: true });
     }
