@@ -107,7 +107,5 @@ test("a student can sign up, edit the profile, log out, log in and delete the ac
   await page.getByLabel("Email address").fill(email);
   await page.getByLabel("Password").fill(password);
   await page.getByRole("button", { name: "Log in" }).click();
-  await expect(
-    page.getByText("The email address or the password is not correct."),
-  ).toBeVisible();
+  await expect(page.getByText("Invalid email or password.")).toBeVisible();
 });
