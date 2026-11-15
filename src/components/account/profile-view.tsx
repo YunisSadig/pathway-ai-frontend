@@ -151,6 +151,7 @@ export function ProfileView() {
           problems: {},
         }}
         incomplete={completed ? {} : incomplete}
+        hideReady={completed}
         onEdit={(step) =>
           router.push(`/profile/edit?step=${STEPS.indexOf(step) + 1}`)
         }

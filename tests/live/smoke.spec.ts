@@ -104,11 +104,11 @@ test("a student can sign up, edit the profile, log out, log in and delete the ac
   await next();
   await page.getByRole("button", { name: "Finish", exact: true }).click();
   await expect(page).toHaveURL(/\/profile\?done=1/);
-  await expect(page.getByText("Synthetic Smoke School")).toBeVisible();
+  await expect(page.getByText("Synthetic Smoke School").first()).toBeVisible();
 
   // the session and the profile survive a reload
   await page.reload();
-  await expect(page.getByText("Synthetic Smoke School")).toBeVisible();
+  await expect(page.getByText("Synthetic Smoke School").first()).toBeVisible();
 
   // the catalogue stays closed to a new account (no catalogue_access)
   const catalogue = await page.request.get("/api/v1/programs?size=1");
