@@ -65,17 +65,44 @@ test("a student can sign up, edit the profile, log out, log in and delete the ac
 
   await expect(page).toHaveURL(/\/dashboard/);
 
+  // the guided profile, as a high-school student (the shortest honest path)
   await page.goto("/profile/edit");
-  await page
-    .getByLabel(/Current or previous university/)
-    .fill("Synthetic Smoke University");
-  await page.getByRole("button", { name: "Save profile" }).click();
-  await expect(page).toHaveURL(/\/profile(\?|$)/);
-  await expect(page.getByText("Synthetic Smoke University")).toBeVisible();
+  const pick = async (label: string, search: string, option: string) => {
+    const box = page.getByLabel(label, { exact: true });
+    await box.click();
+    await box.fill(search);
+    await page.getByRole("option", { name: option }).click();
+  };
+  const next = () => page.getByRole("button", { name: "Continue" }).click();
+  await pick("Citizenship", "Azer", "Azerbaijan");
+  await pick("Country where you live now", "Azer", "Azerbaijan");
+  await next();
+  await page.getByRole("radio", { name: /^High school/ }).click();
+  await page.getByLabel("School name").fill("Synthetic Smoke School");
+  await pick("Country of education", "Azer", "Azerbaijan");
+  await page.getByLabel("Current grade").selectOption({ label: "Grade 11" });
+  await page.getByLabel("Expected graduation year").selectOption({ index: 2 });
+  await page.getByRole("radio", { name: "Computer Science / Information Technology" }).click();
+  await next();
+  await page.getByRole("radio", { name: "Yes, I will enter my grade" }).click();
+  await page.getByLabel("How are your grades reported?").selectOption({ label: "Marks 1–5 (5 is the highest)" });
+  await page.getByLabel("Your grade", { exact: true }).fill("4.5");
+  await next();
+  await page.getByRole("radio", { name: "No internships yet" }).click();
+  await page.getByRole("radio", { name: "No volunteering experience yet" }).click();
+  await page.getByRole("radio", { name: "Not taken yet" }).click();
+  await next();
+  await page.getByRole("radio", { name: "Bachelor's degree" }).click();
+  await page.getByRole("radio", { name: "I have a budget" }).click();
+  await page.getByLabel("Amount per year").fill("5000");
+  await next();
+  await page.getByRole("button", { name: "Finish", exact: true }).click();
+  await expect(page).toHaveURL(//profile?done=1/);
+  await expect(page.getByText("Synthetic Smoke School")).toBeVisible();
 
-  // the session survives a reload
+  // the session and the profile survive a reload
   await page.reload();
-  await expect(page.getByText("Synthetic Smoke University")).toBeVisible();
+  await expect(page.getByText("Synthetic Smoke School")).toBeVisible();
 
   // the catalogue stays closed to a new account (no catalogue_access)
   const catalogue = await page.request.get("/api/v1/programs?size=1");
