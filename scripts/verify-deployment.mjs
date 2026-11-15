@@ -82,6 +82,7 @@ for (const path of [
   "/how-it-works",
   "/scholarships",
   "/universities",
+  "/settings",
 ]) {
   const res = await get(site + path);
   const type = res.headers?.get?.("content-type") ?? "";
@@ -93,7 +94,7 @@ for (const path of [
 }
 
 console.log("Private pages");
-for (const path of ["/dashboard", "/profile", "/saved", "/settings"]) {
+for (const path of ["/dashboard", "/profile", "/saved"]) {
   const res = await get(site + path, { redirect: "manual" });
   const where = res.headers?.get?.("location") ?? "";
   if ([302, 303, 307, 308].includes(res.status) && where.includes("/login"))

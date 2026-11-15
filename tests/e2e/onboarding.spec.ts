@@ -128,6 +128,12 @@ test.describe("guided profile", () => {
     await page.getByRole("button", { name: "Finish", exact: true }).click();
     await expect(page).toHaveURL(/\/profile\?done=1/);
     await expect(page.getByText("Profile complete")).toBeVisible();
+    // a finished profile does not tell the student to press Finish again
+    await expect(
+      page
+        .getByText("Check the details below and press Finish.")
+        .filter({ visible: true }),
+    ).toHaveCount(0);
     const doc = api.documents.get("synthetic-1") as {
       school: { grade: { scale: string; value: number } };
       budget: { currency: string; amount: number };

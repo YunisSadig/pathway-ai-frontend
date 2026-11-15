@@ -89,10 +89,13 @@ export function ReviewStep({
   props,
   onEdit,
   incomplete,
+  hideReady = false,
 }: {
   props: StepProps;
   onEdit: (step: StepName) => void;
   incomplete: Problems;
+  /** On the profile page of a finished profile the "press Finish" banner would be wrong. */
+  hideReady?: boolean;
 }) {
   const { t, lang } = useT();
   const { draft, destinations } = props;
@@ -120,7 +123,7 @@ export function ReviewStep({
         <Alert kind="error" title={t("review.missingTitle")}>
           {t("review.missingBody")}
         </Alert>
-      ) : (
+      ) : hideReady ? null : (
         <Alert kind="success" title={t("review.readyTitle")}>
           {t("review.readyBody")}
         </Alert>
