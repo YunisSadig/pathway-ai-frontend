@@ -400,7 +400,8 @@ export const en = {
   "settings.secSecurity": "Account & Security",
   "settings.secAppearance": "Appearance",
   "settings.profileCard": "Picture and name",
-  "settings.profileHelp": "Your academic details are edited in the guided profile.",
+  "settings.profileHelp":
+    "Your academic details are edited in the guided profile.",
   "settings.changePicture": "Change picture",
   "settings.editProfile": "Edit full profile",
   "settings.appearance": "Appearance",
