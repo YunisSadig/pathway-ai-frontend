@@ -1,3 +1,4 @@
+import { crc32, deflateSync } from "node:zlib";
 import type { Page, Route } from "@playwright/test";
 import { API } from "./api";
 
@@ -134,11 +135,30 @@ export const OPTIONS = {
   toeflNewScaleEffectiveFrom: "2026-01-21",
 };
 
-/** A 1x1 picture, enough for an <img> to load. */
-const TINY_JPEG = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
-  "base64",
-);
+/** A valid 2x2 PNG built here (with real CRCs), so an <img> always decodes it. */
+function makePng(): Buffer {
+  const chunk = (type: string, data: Buffer) => {
+    const body = Buffer.concat([Buffer.from(type, "ascii"), data]);
+    const length = Buffer.alloc(4);
+    length.writeUInt32BE(data.length);
+    const crc = Buffer.alloc(4);
+    crc.writeUInt32BE(crc32(body) >>> 0);
+    return Buffer.concat([length, body, crc]);
+  };
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(2, 0); // width
+  header.writeUInt32BE(2, 4); // height
+  header[8] = 8; // bit depth
+  header[9] = 2; // RGB
+  const row = Buffer.from([0, 66, 99, 245, 66, 99, 245]); // filter byte + two pixels
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk("IHDR", header),
+    chunk("IDAT", deflateSync(Buffer.concat([row, row]))),
+    chunk("IEND", Buffer.alloc(0)),
+  ]);
+}
+const TINY_PICTURE = makePng();
 
 const EMPTY_PROFILE = {
   currentCountry: null,
@@ -469,7 +489,7 @@ export async function mockAccountApi(
             "access-control-allow-origin": SITE,
             "access-control-allow-credentials": "true",
           },
-          body: TINY_JPEG,
+          body: TINY_PICTURE,
         });
       }
       return error(route, 404, "NOT_FOUND", "Not found.");

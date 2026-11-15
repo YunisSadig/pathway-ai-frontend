@@ -108,3 +108,15 @@ describe("bounded API calls", () => {
     expect(error.status).toBe(0);
   });
 });
+
+describe("avatar address", () => {
+  it("uses the configured API base, like every other call", async () => {
+    const { avatarUrl } = await import("@/lib/profile/api");
+    vi.stubEnv("NEXT_PUBLIC_API_BASE_URL", "same-origin");
+    expect(avatarUrl(3)).toBe("/api/v1/account/avatar?v=3");
+    vi.stubEnv("NEXT_PUBLIC_API_BASE_URL", "https://api.example.com/");
+    expect(avatarUrl(3)).toBe(
+      "https://api.example.com/api/v1/account/avatar?v=3",
+    );
+  });
+});

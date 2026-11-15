@@ -1,4 +1,4 @@
-import { apiGet, apiSend, apiUpload } from "@/lib/api/client";
+import { apiBaseUrl, apiGet, apiSend, apiUpload } from "@/lib/api/client";
 import type {
   Destinations,
   Options,
@@ -30,5 +30,6 @@ export const profileApi = {
 
 /** The picture is private to its owner and cached by the browser per version (the version changes on every upload). */
 export function avatarUrl(version: number): string {
-  return `${BASE}/avatar?v=${version}`;
+  // the same base as every other call: same-origin in production, the backend itself in local development
+  return `${apiBaseUrl() ?? ""}${BASE}/avatar?v=${version}`;
 }
