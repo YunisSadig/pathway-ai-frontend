@@ -12,7 +12,8 @@ import {
   isGateStatus,
 } from "@/components/shared/catalogue-protected";
 import { API_NOT_CONFIGURED } from "@/lib/api/client";
-import { listPrograms } from "@/lib/api/programs";
+import { useCatalogueScope } from "@/lib/api/catalogue-scope";
+import { listPrograms, listPublicPrograms } from "@/lib/api/programs";
 import {
   discoveryHref,
   toProgramsQuery,
@@ -28,10 +29,11 @@ type Base = { region?: string | null; country?: string | null };
 
 /** Facets (disciplines and languages) are derived from the programs the API holds for the destination. */
 function useFacets(country: string | null): Facets {
+  const scope = useCatalogueScope();
+  const list = scope === "public" ? listPublicPrograms : listPrograms;
   const { state } = useApiQuery<Page<ProgramListItem>>(
-    `facets:${country ?? "all"}`,
-    (signal) =>
-      listPrograms({ country: country ?? undefined, size: 100 }, { signal }),
+    `facets:${scope}:${country ?? "all"}`,
+    (signal) => list({ country: country ?? undefined, size: 100 }, { signal }),
     (page) => Array.isArray(page?.content),
   );
   return useMemo(() => {
@@ -68,9 +70,13 @@ export function ProgramsPanel({
     () => toProgramsQuery(params, country),
     [params, country],
   );
+  const scope = useCatalogueScope();
   const { state, retry } = useApiQuery<Page<ProgramListItem>>(
-    JSON.stringify(query),
-    (signal) => listPrograms(query, { signal }),
+    `${scope}:${JSON.stringify(query)}`,
+    (signal) =>
+      (scope === "public" ? listPublicPrograms : listPrograms)(query, {
+        signal,
+      }),
     (page) => Array.isArray(page?.content),
   );
   const facets = useFacets(country);

@@ -1,3 +1,5 @@
+import type { Page } from "@/types/api";
+import type { UniversityQuery, UniversitySummary } from "@/types/university";
 import { apiGet } from "./client";
 
 /** What a visitor may see about one institution (the backend allow-list; nothing academic). */
@@ -32,6 +34,22 @@ export const listPublicUniversities = (
     BASE,
     { q: q.trim() || undefined, page, size },
     { signal },
+  );
+
+/** The same list for the discovery explorer (country filter included); rows are a superset of the protected summary. */
+export const searchPublicUniversities = (
+  query: UniversityQuery = {},
+  init?: RequestInit,
+) =>
+  apiGet<Page<UniversitySummary>>(
+    BASE,
+    {
+      q: query.q,
+      country: query.country,
+      page: query.page,
+      size: query.size,
+    },
+    init,
   );
 
 export const getPublicUniversity = (slug: string, signal?: AbortSignal) =>

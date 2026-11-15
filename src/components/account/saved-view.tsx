@@ -10,6 +10,7 @@ import type { Account } from "@/lib/account/types";
 import { useT } from "@/lib/i18n";
 
 export function SavedView({ user }: { user: Account }) {
+  void user; // the saved lists are the same for every account
   const { t } = useT();
   const { describe } = useErrorText();
   const { items, ready, error, toggleProgram, toggleUniversity } = useSaved();
@@ -24,21 +25,6 @@ export function SavedView({ user }: { user: Account }) {
     }
   }
 
-  if (
-    !user.catalogueAccess &&
-    !items.catalogueVisible &&
-    ready &&
-    items.universities.length === 0
-  ) {
-    return (
-      <Alert kind="info" title={t("saved.protectedTitle")}>
-        {t("saved.protectedBody")}{" "}
-        <Link href="/profile" className="font-semibold underline">
-          {t("saved.protectedLink")}
-        </Link>
-      </Alert>
-    );
-  }
   if (!ready) {
     return (
       <div

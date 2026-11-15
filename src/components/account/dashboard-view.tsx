@@ -39,11 +39,6 @@ export function DashboardView({ user }: { user: Account }) {
           {t("dash.welcomeBody")}
         </Alert>
       ) : null}
-      {!user.emailVerified ? (
-        <Alert kind="info" title={t("dash.emailTitle")}>
-          {t("dash.emailBody")}
-        </Alert>
-      ) : null}
 
       <div className="grid gap-5 lg:grid-cols-3">
         <section
@@ -136,20 +131,14 @@ export function DashboardView({ user }: { user: Account }) {
               <Bookmark className="size-5" />
             </span>
           </div>
-          {user.catalogueAccess ? (
-            <p className="mt-1 text-sm text-muted-foreground">
-              {ready
-                ? t("dash.savedCounts", {
-                    programs: items.programs.length,
-                    universities: items.universities.length,
-                  })
-                : t("common.loading")}
-            </p>
-          ) : (
-            <p className="mt-1 text-sm text-muted-foreground">
-              {t("dash.savedProtected")}
-            </p>
-          )}
+          <p className="mt-1 text-sm text-muted-foreground">
+            {ready
+              ? t("dash.savedCounts", {
+                  programs: items.programs.length,
+                  universities: items.universities.length,
+                })
+              : t("common.loading")}
+          </p>
           <Button asChild variant="outline" className="mt-auto self-start">
             <Link href="/saved">{t("dash.openSaved")}</Link>
           </Button>
@@ -164,13 +153,7 @@ export function DashboardView({ user }: { user: Account }) {
           {(
             [
               ["dash.row.profile", "verified", "dash.badge.available"],
-              [
-                "dash.row.discovery",
-                user.catalogueAccess ? "verified" : "hypothetical",
-                user.catalogueAccess
-                  ? "dash.badge.availableToYou"
-                  : "dash.badge.beta",
-              ],
+              ["dash.row.discovery", "verified", "dash.badge.available"],
               ["dash.row.scholarships", "neutral", "dash.badge.soon"],
               ["dash.row.matching", "neutral", "dash.badge.soon"],
             ] as [Key, "verified" | "hypothetical" | "neutral", Key][]
@@ -184,13 +167,11 @@ export function DashboardView({ user }: { user: Account }) {
             </li>
           ))}
         </ul>
-        {user.catalogueAccess ? (
-          <Button asChild variant="link" size="link" className="mt-3">
-            <Link href="/universities">
-              {t("dash.explore")} <ArrowRight aria-hidden />
-            </Link>
-          </Button>
-        ) : null}
+        <Button asChild variant="link" size="link" className="mt-3">
+          <Link href="/universities">
+            {t("dash.explore")} <ArrowRight aria-hidden />
+          </Link>
+        </Button>
       </section>
     </div>
   );

@@ -13,7 +13,9 @@ import {
   getPublicUniversity,
   type PublicUniversity,
 } from "@/lib/api/public-universities";
+import { listPublicPrograms } from "@/lib/api/programs";
 import { dateLabel, useT } from "@/lib/i18n";
+import type { ProgramListItem } from "@/types/program";
 
 /** One institution for everyone: identity, the OFFICIAL website, when we verified it, and an honest note about what is tracked. */
 export function PublicUniversityDetail() {
@@ -21,6 +23,18 @@ export function PublicUniversityDetail() {
   const { slug } = useParams<{ slug: string }>();
   const [u, setU] = useState<PublicUniversity | null>(null);
   const [problem, setProblem] = useState<"none" | "missing" | "error">("none");
+  const [progs, setProgs] = useState<ProgramListItem[]>([]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    listPublicPrograms(
+      { university: slug, size: 100 },
+      { signal: controller.signal },
+    )
+      .then((page) => setProgs(page.content))
+      .catch(() => setProgs([]));
+    return () => controller.abort();
+  }, [slug]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -118,6 +132,30 @@ export function PublicUniversityDetail() {
               {t("pub.notWhole")}
             </p>
           </section>
+
+          {progs.length ? (
+            <section className="card p-6" aria-labelledby="pub-programs">
+              <h2 id="pub-programs" className="text-lg font-bold">
+                {t("pub.programsList")}
+              </h2>
+              <ul className="mt-3 divide-y divide-border">
+                {progs.map((p) => (
+                  <li key={p.identifier} className="py-2">
+                    <Link
+                      href={`/programs/${p.identifier}`}
+                      className="font-medium underline"
+                    >
+                      {p.name}
+                    </Link>{" "}
+                    <span className="text-sm text-muted-foreground">
+                      {p.degreeLevel.toLowerCase()}
+                      {p.field ? ` · ${p.field.name}` : ""}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
 
           <Alert kind="info" title={t("pub.programsTitle")}>
             {t("pub.programsBody")}{" "}
