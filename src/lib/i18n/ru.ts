@@ -404,6 +404,34 @@ export const ru: Record<Key, string> = {
   "settings.profileHelp": "Учебные данные редактируются в пошаговом профиле.",
   "settings.changePicture": "Сменить фото",
   "settings.editProfile": "Редактировать профиль полностью",
+  "auth.google.continue": "Продолжить через Google",
+  "auth.google.or": "или",
+  "auth.google.err.state":
+    "Вход через Google истёк или был прерван. Попробуйте ещё раз.",
+  "auth.google.err.cancelled": "Вход через Google отменён.",
+  "auth.google.err.failed":
+    "Не удалось войти через Google. Попробуйте ещё раз или войдите по email.",
+  "auth.google.err.conflict":
+    "Аккаунт с этим email уже существует. Войдите по паролю, затем подключите Google в Настройках, раздел «Аккаунт и безопасность».",
+  "auth.google.err.unverified":
+    "Google не подтвердил этот адрес email, поэтому создать по нему аккаунт нельзя.",
+  "auth.google.err.unavailable": "Вход через Google сейчас недоступен.",
+  "settings.googleTitle": "Вход через Google",
+  "settings.googleOnly":
+    "Вы входите через Google, поэтому у этого аккаунта нет пароля.",
+  "settings.googleLinked": "Google подключён к этому аккаунту.",
+  "settings.googleHelp":
+    "Введите пароль, чтобы подключить аккаунт Google. После этого можно входить любым способом.",
+  "settings.googleConnect": "Подключить Google",
+  "settings.googleNoDelete":
+    "Аккаунт, использующий вход через Google, пока нельзя удалить здесь. Свяжитесь с нами, чтобы его удалили.",
+  "settings.google.linked": "Google подключён.",
+  "settings.google.taken":
+    "Этот аккаунт Google уже используется другим аккаунтом Pathway AI.",
+  "settings.google.expired":
+    "Подключение заняло слишком много времени или начато не из этой сессии. Попробуйте ещё раз.",
+  "settings.google.cancelled": "Подключение Google отменено.",
+  "settings.google.failed": "Не удалось подключить Google. Попробуйте ещё раз.",
   "settings.appearance": "Внешний вид",
   "settings.appearanceHelp": "Как выглядит Pathway AI на этом устройстве.",
   "settings.theme": "Тема",

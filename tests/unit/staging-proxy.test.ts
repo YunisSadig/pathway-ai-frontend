@@ -363,3 +363,60 @@ describe("same-origin base URL", () => {
     expect(apiBaseUrl()).toBeNull();
   });
 });
+
+describe("the Google sign-in redirects through the proxy", () => {
+  const START = ["account", "oauth", "google", "start"];
+  const CALLBACK = ["account", "oauth", "google", "callback"];
+
+  function upstream(location: string, status = 302) {
+    vi.stubEnv("API_UPSTREAM_URL", "https://api.example.com/");
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(null, {
+        status,
+        headers: {
+          location,
+          "set-cookie": "PATHWAY_SESSION=new; HttpOnly; Path=/",
+        },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    return fetchMock;
+  }
+
+  it("passes a redirect to Google or to this site, with the session cookie, without following it", async () => {
+    const google =
+      "https://accounts.google.com/o/oauth2/v2/auth?client_id=x&state=y";
+    const fetchMock = upstream(google);
+    const res = await call(START, "?next=%2Fsaved");
+    expect(res.status).toBe(302);
+    expect(res.headers.get("location")).toBe(google);
+    expect(res.headers.get("set-cookie")).toContain("PATHWAY_SESSION=new");
+    expect((fetchMock.mock.calls[0][1] as RequestInit).redirect).toBe("manual");
+
+    upstream("https://site.test/dashboard?welcome=1");
+    const back = await call(CALLBACK, "?code=abc&state=s");
+    expect(back.status).toBe(302);
+    expect(back.headers.get("location")).toBe(
+      "https://site.test/dashboard?welcome=1",
+    );
+  });
+
+  it("refuses a redirect to any other address", async () => {
+    for (const evil of [
+      "https://evil.example/phish",
+      "https://accounts.google.com.evil.example/o/oauth2/v2/auth?x=1",
+      "//evil.example",
+    ]) {
+      upstream(evil);
+      const res = await call(START);
+      expect(res.status, evil).toBe(502);
+      expect(res.headers.get("location")).toBeNull();
+    }
+  });
+
+  it("does not turn any other route into a redirecting one", async () => {
+    const fetchMock = upstream("https://evil.example/");
+    await call(["account", "me"]);
+    expect((fetchMock.mock.calls[0][1] as RequestInit).redirect).toBe("error");
+  });
+});

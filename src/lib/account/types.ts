@@ -11,6 +11,10 @@ export interface Account {
   createdAt: string;
   /** The profile picture's state, from the same answer every screen reads (so the navigation can never lag behind the profile). */
   avatar?: { present: boolean; version: number };
+  /** False for an account that signs in with Google only. */
+  hasPassword?: boolean;
+  /** Connected sign-in providers, e.g. ["GOOGLE"]. */
+  providers?: string[];
 }
 
 /** What the service can really do right now, so the site never offers a button that cannot work. */
@@ -18,6 +22,8 @@ export interface AccountConfig {
   registrationOpen: boolean;
   emailDeliveryAvailable: boolean;
   cataloguePublic: boolean;
+  /** True only when the server has Google credentials configured; otherwise the button is simply not shown. */
+  googleLoginAvailable?: boolean;
 }
 
 export interface RegisterResponse {

@@ -12,6 +12,7 @@ import { useAccountConfig } from "@/lib/account/use-account-config";
 import { useSlowPhase } from "@/lib/account/use-slow-phase";
 import { useT, type Key } from "@/lib/i18n";
 import { TextLink } from "./auth-shell";
+import { GoogleButton, GoogleNotice } from "./google-button";
 import { safeNext, useSession } from "./session-provider";
 
 const REASONS: Record<string, { kind: "info" | "success"; key: Key }> = {
@@ -81,60 +82,64 @@ export function LoginForm() {
   }
 
   return (
-    <form
-      onSubmit={submit}
-      noValidate
-      className="grid gap-5"
-      aria-busy={pending}
-    >
-      {notice ? <Alert kind={notice.kind}>{t(notice.key)}</Alert> : null}
-      {error ? <Alert kind="error">{error}</Alert> : null}
-      <Field id="email" label={t("auth.email")}>
-        {(p) => (
-          <Input
-            {...p}
-            type="email"
-            name="email"
-            autoComplete="email"
-            inputMode="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-        )}
-      </Field>
-      <Field id="password" label={t("auth.password")}>
-        {(p) => (
-          <Input
-            {...p}
-            type="password"
-            name="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-        )}
-      </Field>
-      <Button type="submit" size="lg" disabled={pending || signedIn}>
-        {pending
-          ? t("auth.loggingIn")
-          : signedIn
-            ? t("auth.redirecting")
-            : t("auth.login")}
-      </Button>
-      <div role="status" aria-live="polite">
-        {phase > 0 ? (
-          <Alert kind="info">
-            {t(phase === 1 ? "auth.slow1" : "auth.slow2")}
-          </Alert>
+    <div className="grid gap-5">
+      <GoogleNotice />
+      <GoogleButton next={next} />
+      <form
+        onSubmit={submit}
+        noValidate
+        className="grid gap-5"
+        aria-busy={pending}
+      >
+        {notice ? <Alert kind={notice.kind}>{t(notice.key)}</Alert> : null}
+        {error ? <Alert kind="error">{error}</Alert> : null}
+        <Field id="email" label={t("auth.email")}>
+          {(p) => (
+            <Input
+              {...p}
+              type="email"
+              name="email"
+              autoComplete="email"
+              inputMode="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          )}
+        </Field>
+        <Field id="password" label={t("auth.password")}>
+          {(p) => (
+            <Input
+              {...p}
+              type="password"
+              name="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          )}
+        </Field>
+        <Button type="submit" size="lg" disabled={pending || signedIn}>
+          {pending
+            ? t("auth.loggingIn")
+            : signedIn
+              ? t("auth.redirecting")
+              : t("auth.login")}
+        </Button>
+        <div role="status" aria-live="polite">
+          {phase > 0 ? (
+            <Alert kind="info">
+              {t(phase === 1 ? "auth.slow1" : "auth.slow2")}
+            </Alert>
+          ) : null}
+        </div>
+        {config?.emailDeliveryAvailable ? (
+          <p className="text-center text-sm">
+            <TextLink href="/forgot-password">{t("auth.forgot")}</TextLink>
+          </p>
         ) : null}
-      </div>
-      {config?.emailDeliveryAvailable ? (
-        <p className="text-center text-sm">
-          <TextLink href="/forgot-password">{t("auth.forgot")}</TextLink>
-        </p>
-      ) : null}
-    </form>
+      </form>
+    </div>
   );
 }

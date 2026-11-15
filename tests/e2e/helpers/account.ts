@@ -11,6 +11,8 @@ export interface FakeAccount {
   email: string;
   password: string;
   displayName: string | null;
+  /** A synthetic account that signs in with Google only (no password). */
+  googleOnly?: boolean;
   id: string;
 }
 
@@ -28,7 +30,11 @@ export interface FakeAccountApi {
   delays: Map<string, number>;
   /** Simulates a session that ended on the server. */
   expireSession(): Promise<void>;
-  options: { registrationOpen: boolean; emailDeliveryAvailable: boolean };
+  options: {
+    registrationOpen: boolean;
+    emailDeliveryAvailable: boolean;
+    googleLoginAvailable?: boolean;
+  };
   /** What GET /options/destinations answers. Restricted by default, like an account without catalogue access. */
   destinations: {
     restricted: boolean;
@@ -242,6 +248,8 @@ export async function mockAccountApi(
     emailVerified: false,
     catalogueAccess: false,
     createdAt: "2000-01-01T00:00:00Z",
+    hasPassword: !a.googleOnly,
+    providers: a.googleOnly ? ["GOOGLE"] : [],
     avatar: {
       present: (state.avatars.get(a.id) ?? 0) > 0,
       version: state.avatars.get(a.id) ?? 0,
@@ -332,6 +340,18 @@ export async function mockAccountApi(
       }
       if (!me) return error(route, 401, "UNAUTHENTICATED", "Please log in.");
 
+      if (path === "/oauth/google/link" && method === "POST") {
+        if (input.password !== me.password)
+          return error(
+            route,
+            403,
+            "WRONG_PASSWORD",
+            "Your password is not correct.",
+          );
+        return reply(route, 200, {
+          url: "/settings?section=security&google=linked",
+        });
+      }
       if (path === "/me" && method === "GET")
         return reply(route, 200, view(me));
       if (path === "/me" && method === "PATCH") {

@@ -485,6 +485,85 @@ function DeleteCard() {
   );
 }
 
+const GOOGLE_RESULTS: Record<string, { kind: "success" | "error"; key: Key }> =
+  {
+    linked: { kind: "success", key: "settings.google.linked" },
+    taken: { kind: "error", key: "settings.google.taken" },
+    expired: { kind: "error", key: "settings.google.expired" },
+    cancelled: { kind: "error", key: "settings.google.cancelled" },
+    failed: { kind: "error", key: "settings.google.failed" },
+  };
+
+/** The outcome of connecting Google (a short code in the address) and the connect form, for accounts that have a password. */
+function GoogleNotice() {
+  const { t } = useT();
+  const result = GOOGLE_RESULTS[useSearchParams().get("google") ?? ""];
+  return result ? <Alert kind={result.kind}>{t(result.key)}</Alert> : null;
+}
+
+function GoogleCard({ user }: { user: Account }) {
+  const { t } = useT();
+  const { describe } = useErrorText();
+  const { config } = useAccountConfig();
+  const [password, setPassword] = useState("");
+  const [pending, setPending] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+  const linked = user.providers?.includes("GOOGLE") ?? false;
+  if (!linked && !config?.googleLoginAvailable) return null;
+
+  async function connect(event: React.FormEvent) {
+    event.preventDefault();
+    if (pending) return;
+    setPending(true);
+    setProblem(null);
+    try {
+      const { url } = await accountApi.allowGoogleLink(password);
+      setPassword("");
+      window.location.assign(url); // the trip to Google and back is a full-page navigation
+    } catch (e) {
+      setProblem(describe(e));
+      setPending(false);
+    }
+  }
+
+  return (
+    <Card title={t("settings.googleTitle")}>
+      {user.hasPassword === false ? (
+        <p className="text-sm">{t("settings.googleOnly")}</p>
+      ) : linked ? (
+        <p className="text-sm">{t("settings.googleLinked")}</p>
+      ) : (
+        <form onSubmit={connect} className="grid max-w-md gap-3">
+          <p className="text-sm text-muted-foreground">
+            {t("settings.googleHelp")}
+          </p>
+          {problem ? <Alert kind="error">{problem}</Alert> : null}
+          <Field id="googlePassword" label={t("settings.currentPassword")}>
+            {(p) => (
+              <Input
+                {...p}
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            )}
+          </Field>
+          <div>
+            <Button
+              type="submit"
+              variant="outline"
+              disabled={pending || !password}
+            >
+              {t("settings.googleConnect")}
+            </Button>
+          </div>
+        </form>
+      )}
+    </Card>
+  );
+}
+
 type Section = "profile" | "security" | "appearance";
 const SECTIONS: { id: Section; label: Key }[] = [
   { id: "profile", label: "settings.secProfile" },
@@ -541,10 +620,16 @@ export function SettingsView() {
         {user && section === "profile" ? <ProfileCard user={user} /> : null}
         {user && section === "security" ? (
           <>
+            <GoogleNotice />
             <EmailCard user={user} />
-            <PasswordCard />
+            <GoogleCard user={user} />
+            {user.hasPassword === false ? null : <PasswordCard />}
             <DataCard />
-            <DeleteCard />
+            {user.hasPassword === false ? (
+              <Alert kind="info">{t("settings.googleNoDelete")}</Alert>
+            ) : (
+              <DeleteCard />
+            )}
           </>
         ) : null}
         {!user && state.status === "anonymous" ? (
