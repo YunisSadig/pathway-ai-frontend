@@ -261,3 +261,110 @@ test("a visitor explores real universities without an account, and Save asks for
   // the academic catalogue is still closed to visitors
   expect((await request.get("/api/v1/programs?size=1")).status()).toBe(401);
 });
+
+test("a disposable account's picture: upload, navigation, reload, log out and in, replace, remove", async ({
+  page,
+  request,
+}) => {
+  const config = await (await request.get("/api/v1/account/config")).json();
+  test.skip(
+    !config.registrationOpen || config.emailDeliveryAvailable,
+    "needs open registration without email confirmation",
+  );
+  const stamp = `${Date.now()}${Math.floor(Math.random() * 1e6)}`;
+  const email = `pathway-avatar-${stamp}@example.com`;
+  const password = `Avatar-${Math.random().toString(36).slice(2)}-${stamp}`;
+
+  await page.goto("/signup");
+  await page.getByLabel("Email address").fill(email);
+  await page.getByLabel("Password", { exact: true }).fill(password);
+  await page.getByLabel(/I have read the/).check();
+  await page.getByRole("button", { name: "Create your account" }).click();
+  await expect(page).toHaveURL(/\/dashboard/);
+
+  const origin = new URL(page.url()).origin;
+  const headers = { Origin: origin };
+  const menuPicture = () =>
+    page.getByRole("button", { name: "Account menu" }).locator("img");
+  const me = async () =>
+    (await (await page.request.get("/api/v1/account/me")).json()).avatar;
+  const png = async (shade: number) =>
+    Buffer.from(
+      await page.evaluate((s) => {
+        const c = document.createElement("canvas");
+        c.width = 300;
+        c.height = 300;
+        const g = c.getContext("2d")!;
+        g.fillStyle = `rgb(${s}, 90, 200)`;
+        g.fillRect(0, 0, 300, 300);
+        g.fillStyle = "white";
+        g.fillRect(100, 100, 100, 100);
+        return c.toDataURL("image/png").split(",")[1];
+      }, shade),
+      "base64",
+    );
+  const login = async () => {
+    await page.goto("/login");
+    await page.getByLabel("Email address").fill(email);
+    await page.getByLabel("Password").fill(password);
+    await page.getByRole("button", { name: "Log in" }).click();
+    await expect(page).toHaveURL(/\/dashboard/);
+  };
+
+  try {
+    expect((await me()).present).toBe(false);
+    await expect(menuPicture()).toHaveCount(0); // no picture: the initial
+
+    const up = await page.request.put("/api/v1/account/avatar", {
+      headers: { ...headers, "Content-Type": "image/png" },
+      data: await png(40),
+    });
+    expect(up.status()).toBe(200);
+    expect(await me()).toEqual({ present: true, version: 1 });
+
+    await page.reload();
+    await expect(menuPicture()).toHaveCount(1);
+    const bytes = await page.request.get("/api/v1/account/avatar");
+    expect(bytes.status()).toBe(200);
+    expect(bytes.headers()["content-type"]).toContain("image/jpeg");
+
+    // log out and in again: the picture is still there
+    const out = await page.request.post("/api/v1/account/logout", { headers });
+    expect(out.status()).toBeLessThan(400);
+    await page.context().clearCookies();
+    await login();
+    await expect(menuPicture()).toHaveCount(1);
+    expect(await me()).toEqual({ present: true, version: 1 });
+
+    // replace: the version moves on and the navigation follows
+    const again = await page.request.put("/api/v1/account/avatar", {
+      headers: { ...headers, "Content-Type": "image/png" },
+      data: await png(200),
+    });
+    expect(again.status()).toBe(200);
+    expect((await me()).version).toBe(2);
+    await page.reload();
+    await expect(menuPicture()).toHaveAttribute("src", /v=2/);
+
+    // remove: back to the initial, and the picture is gone from the server
+    const gone = await page.request.delete("/api/v1/account/avatar", {
+      headers,
+    });
+    expect(gone.status()).toBe(204);
+    expect((await me()).present).toBe(false);
+    await page.reload();
+    await expect(menuPicture()).toHaveCount(0);
+    expect((await page.request.get("/api/v1/account/avatar")).status()).toBe(
+      404,
+    );
+  } finally {
+    // the throwaway account never outlives the test
+    await page.goto("/settings?section=security");
+    await page.getByRole("button", { name: "Delete account…" }).click();
+    await page.getByLabel("Enter your password to confirm").fill(password);
+    await page
+      .getByRole("button", { name: "Delete my account permanently" })
+      .click();
+    await expect(page).toHaveURL(/\/login\?.*reason=deleted/);
+  }
+});
