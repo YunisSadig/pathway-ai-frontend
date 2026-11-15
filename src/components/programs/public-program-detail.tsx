@@ -58,6 +58,10 @@ export function PublicProgramDetail({
     [t("pubprog.languages"), p.teachingLanguages.join(", ") || null],
     [t("pubprog.campus"), p.campusCity],
     [
+      t("pubprog.checked"),
+      p.lastCheckedOn ? dateLabel(p.lastCheckedOn, lang) : null,
+    ],
+    [
       t("pubprog.verified"),
       p.verification?.verifiedOn
         ? dateLabel(p.verification.verifiedOn, lang)
