@@ -166,7 +166,7 @@ test.describe("account lifecycle", () => {
     const api = await mockAccountApi(page);
     seeded(api);
     await logIn(page);
-    await page.goto("/settings");
+    await page.goto("/settings?section=security");
     await page.getByRole("button", { name: "Delete account…" }).click();
     await page
       .getByLabel("Enter your password to confirm")

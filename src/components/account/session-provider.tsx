@@ -33,6 +33,9 @@ interface SessionContextValue {
 
 const SessionContext = createContext<SessionContextValue | null>(null);
 
+/** Pauses between background re-reads while the API cannot be reached (about 2.5 minutes in total: a cold start takes up to two). */
+export const RETRY_DELAYS_MS = [3000, 8000, 20000, 45000, 75000];
+
 /**
  * The browser never holds a token: the session is an opaque HttpOnly cookie that the site's own proxy forwards to the API. This provider
  * only asks "who am I?" (GET /api/v1/account/me) and keeps the answer in memory; it is never written to localStorage or sessionStorage.
@@ -55,6 +58,34 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void refresh();
   }, [refresh]);
+
+  // A sleeping or briefly unavailable API must not look like being logged out: keep asking with growing pauses (and again whenever
+  // the browser comes back online or the tab is shown), and switch to the signed-in state as soon as the answer arrives.
+  const unavailable = state.status === "anonymous" && state.serviceError;
+  useEffect(() => {
+    if (!unavailable) return;
+    let attempt = 0;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const schedule = () => {
+      if (cancelled || attempt >= RETRY_DELAYS_MS.length) return;
+      timer = setTimeout(() => {
+        attempt += 1;
+        void refresh().then(schedule);
+      }, RETRY_DELAYS_MS[attempt]);
+    };
+    const soon = () => {
+      clearTimeout(timer);
+      void refresh();
+    };
+    schedule();
+    window.addEventListener("online", soon);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      window.removeEventListener("online", soon);
+    };
+  }, [unavailable, refresh]);
 
   const signIn = useCallback(
     (user: Account) => setState({ status: "authenticated", user }),
