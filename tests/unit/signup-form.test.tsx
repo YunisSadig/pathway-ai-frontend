@@ -19,9 +19,13 @@ const session = {
 };
 const register = vi.fn();
 
-vi.mock("next/navigation", () => ({ useRouter: () => router }));
+vi.mock("next/navigation", () => ({
+  useRouter: () => router,
+  useSearchParams: () => new URLSearchParams(),
+}));
 vi.mock("@/components/account/session-provider", () => ({
   useSession: () => session,
+  safeNext: (n: string | null) => (n && n.startsWith("/") ? n : "/dashboard"),
 }));
 vi.mock("@/lib/account/use-account-config", () => ({
   useAccountConfig: () => ({

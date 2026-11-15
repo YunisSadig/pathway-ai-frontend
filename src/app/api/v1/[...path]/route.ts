@@ -18,8 +18,9 @@
  */
 export const maxDuration = 150;
 
-const READ_ONLY_AREAS = new Set(["programs", "universities", "discovery"]);
-const CATALOGUE_AREAS = READ_ONLY_AREAS;
+const CATALOGUE_AREAS = new Set(["programs", "universities", "discovery"]);
+// "public" is the allow-listed identity data of the universities: readable without a session (the backend decides the fields)
+const READ_ONLY_AREAS = new Set([...CATALOGUE_AREAS, "public"]);
 const SESSION_COOKIE = "PATHWAY_SESSION";
 // A sleeping free-tier backend needed 84.6 s for its first answer (measured 2026-11-15), so wait well beyond that. The function itself may
 // run longer than the upstream wait (Fluid Compute on the Hobby plan allows it), otherwise the platform would cut the request first.

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { AuthShell } from "@/components/account/auth-shell";
 import { SignupForm } from "@/components/account/signup-form";
 
@@ -11,7 +12,9 @@ export default function SignupPage() {
       description="auth.signupDescription"
       footer={{ text: "auth.haveAccount", link: "auth.login", href: "/login" }}
     >
-      <SignupForm />
+      <Suspense fallback={<div className="h-64" aria-hidden />}>
+        <SignupForm />
+      </Suspense>
     </AuthShell>
   );
 }

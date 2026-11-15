@@ -34,8 +34,8 @@ test.describe("public site", () => {
       page.getByRole("link", { name: "Create your profile" }).first(),
     ).toHaveAttribute("href", "/signup");
     await expect(
-      page.getByRole("link", { name: "Explore the platform" }).first(),
-    ).toHaveAttribute("href", "/how-it-works");
+      page.getByRole("link", { name: "Explore universities" }).first(),
+    ).toHaveAttribute("href", "/universities");
   });
 
   for (const path of [
@@ -201,26 +201,4 @@ test.describe("account lifecycle", () => {
     await page.goto("/profile");
     await expect(page).toHaveURL(/\/login/);
   });
-});
-
-test("a visitor sees an honest protected state in the catalogue", async ({
-  page,
-}) => {
-  await mockAccountApi(page);
-  await page.route("http://api.pathway.test/api/v1/programs*", (route) =>
-    route.fulfill({
-      status: 401,
-      contentType: "application/json",
-      headers: { "access-control-allow-origin": "*" },
-      body: JSON.stringify({
-        status: 401,
-        code: "UNAUTHENTICATED",
-        message: "Please log in.",
-      }),
-    }),
-  );
-  await page.goto("/universities");
-  await expect(
-    page.getByRole("link", { name: /log in/i }).first(),
-  ).toBeVisible();
 });

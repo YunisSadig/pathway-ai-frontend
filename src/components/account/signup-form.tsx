@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useRef, useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import { useErrorText } from "@/lib/account/errors";
 import { useAccountConfig } from "@/lib/account/use-account-config";
 import { useSlowPhase } from "@/lib/account/use-slow-phase";
 import { useT } from "@/lib/i18n";
-import { useSession } from "./session-provider";
+import { safeNext, useSession } from "./session-provider";
 
 const MIN = 10;
 
@@ -20,6 +20,7 @@ export function SignupForm() {
   const { t } = useT();
   const { describe, fields } = useErrorText();
   const router = useRouter();
+  const params = useSearchParams();
   const { signIn } = useSession();
   const { config } = useAccountConfig();
   const [email, setEmail] = useState("");
@@ -61,7 +62,8 @@ export function SignupForm() {
       }
       signIn(result.account);
       setPassword(""); // not kept once used
-      const target = "/dashboard?welcome=1";
+      const wanted = params.get("next");
+      const target = wanted ? safeNext(wanted) : "/dashboard?welcome=1";
       router.replace(target);
       // last resort if the router did not leave this page: a full navigation
       window.setTimeout(() => {

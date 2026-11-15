@@ -350,6 +350,21 @@ export async function mockAccountApi(
         state.profiles.delete(me.id);
         return reply(route, 204);
       }
+      const savedUniversity = path.match(
+        /^\/saved\/universities\/([a-z0-9-]+)$/,
+      );
+      if (savedUniversity && (method === "PUT" || method === "DELETE")) {
+        const mine = state.saved.get(me.id) ?? {
+          programs: [],
+          universities: [],
+        };
+        mine.universities = mine.universities.filter(
+          (x) => x !== savedUniversity[1],
+        );
+        if (method === "PUT") mine.universities.push(savedUniversity[1]);
+        state.saved.set(me.id, mine);
+        return reply(route, 204);
+      }
       if (path === "/saved" && method === "GET") {
         const mine = state.saved.get(me.id) ?? {
           programs: [],
@@ -369,9 +384,9 @@ export async function mockAccountApi(
           universities: mine.universities.map((slug) => ({
             slug,
             savedAt: "2000-01-02T00:00:00Z",
-            available: false,
-            name: null,
-            countryName: null,
+            available: true,
+            name: "Synthetic University",
+            countryName: "Finland",
           })),
         });
       }

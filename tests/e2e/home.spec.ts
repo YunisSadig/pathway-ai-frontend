@@ -16,8 +16,8 @@ test("hero shows the headline and two working calls to action", async ({
     page.getByRole("link", { name: "Create your profile" }).first(),
   ).toHaveAttribute("href", "/signup");
   await expect(
-    page.getByRole("link", { name: "Explore the platform" }).first(),
-  ).toHaveAttribute("href", "/how-it-works");
+    page.getByRole("link", { name: "Explore universities" }).first(),
+  ).toHaveAttribute("href", "/universities");
 });
 
 test("every internal link on every page resolves", async ({

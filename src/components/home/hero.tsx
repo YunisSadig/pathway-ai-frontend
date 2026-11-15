@@ -53,7 +53,7 @@ export function Hero() {
             <Link href="/signup">{t("auth.createProfile")}</Link>
           </Button>
           <Button asChild size="lg" variant="outline">
-            <Link href="/how-it-works">{t("home.explore")}</Link>
+            <Link href="/universities">{t("home.exploreUniversities")}</Link>
           </Button>
         </div>
         <ul className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted-foreground">

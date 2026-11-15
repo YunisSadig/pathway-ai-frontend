@@ -24,7 +24,12 @@ export function SavedView({ user }: { user: Account }) {
     }
   }
 
-  if (!user.catalogueAccess && !items.catalogueVisible) {
+  if (
+    !user.catalogueAccess &&
+    !items.catalogueVisible &&
+    ready &&
+    items.universities.length === 0
+  ) {
     return (
       <Alert kind="info" title={t("saved.protectedTitle")}>
         {t("saved.protectedBody")}{" "}

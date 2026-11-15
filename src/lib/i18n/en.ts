@@ -29,6 +29,52 @@ export const en = {
     "Check known requirements and your profile side by side, with unknowns shown as unknown.",
   "hiw.5.title": "Build your pathway",
   "hiw.5.body": "Create a primary study plan and a backup plan.",
+  "pub.coverageTitle": "What is covered today",
+  "pub.coverageBody":
+    "The catalogue is being expanded and covers only the institutions Pathway AI actually tracks, today in Finland. A university here is not a complete picture of what it teaches: only the programs we keep current are counted.",
+  "pub.search": "Search universities by name",
+  "pub.searchButton": "Search",
+  "pub.loading": "Loading universities…",
+  "pub.errorTitle": "The universities could not be loaded",
+  "pub.errorBody":
+    "Please try again in a moment. If the service was idle it can take up to two minutes to wake up.",
+  "pub.emptyTitle": "No university matches",
+  "pub.emptyBody":
+    "Try a shorter name. Only institutions that are actually tracked are listed.",
+  "pub.count": "{n} universities",
+  "pub.prev": "Previous",
+  "pub.next": "Next",
+  "pub.pageOf": "Page {n} of {total}",
+  "pub.tracked": "{n} programs tracked",
+  "pub.trackedNone": "No program is tracked right now",
+  "pub.verifiedOn": "Verified {date}",
+  "pub.notVerified": "Verification date not available",
+  "pub.accountTitle": "A free account makes it personal",
+  "pub.accountBody":
+    "Create your profile, save universities to a shortlist and keep your study preferences in one place. You never need an account to browse.",
+  "pub.sourceNote":
+    "University names and official websites are verified by Pathway AI. Program details are shown to signed-in beta accounts while the reuse terms of the official data are being confirmed.",
+  "pub.back": "All universities",
+  "pub.missingTitle": "This university is not listed",
+  "pub.missingBody": "It may not be tracked by Pathway AI yet.",
+  "pub.official": "Official website",
+  "pub.factsTitle": "What we can tell you",
+  "pub.officialSite": "Official website",
+  "pub.notStated": "Not stated",
+  "pub.tracking": "Programs tracked",
+  "pub.lastVerified": "Last verified",
+  "pub.notWhole":
+    "This is the number of programs Pathway AI keeps current, not everything the university teaches. Always check the official website for the full offering, fees and deadlines.",
+  "pub.programsTitle": "Programs, requirements and fees",
+  "pub.programsBody":
+    "Program details open to signed-in beta accounts while the reuse terms of the official data are being confirmed.",
+  "home.featuredTitle": "Universities you can explore now",
+  "home.featuredHelp":
+    "Real institutions Pathway AI tracks today (Finland). The list grows as more official sources are connected.",
+  "home.exploreUniversities": "Explore universities",
+  "save.promptTitle": "A free account is needed to save",
+  "save.promptBody":
+    "Create a free account or log in to keep a shortlist. You will come right back to this page.",
   "common.cancel": "Cancel",
   "common.remove": "Remove",
   "common.add": "Add",
