@@ -93,11 +93,17 @@ test("unknown route shows the custom 404 with working links", async ({
   await expect(page).toHaveURL("/");
 });
 
-test("how it works lists five steps and marks only one as available", async ({
+test("how it works lists five steps and states the truth: one available, one protected beta, the rest not built", async ({
   page,
 }) => {
   await page.goto("/how-it-works");
   await expect(page.locator("main ol > li")).toHaveCount(5);
-  await expect(page.getByText("Available now")).toHaveCount(1);
-  await expect(page.getByText("Planned")).toHaveCount(3);
+  await expect(page.getByText("Available now", { exact: true })).toHaveCount(1);
+  await expect(page.getByText("Protected beta", { exact: true })).toHaveCount(
+    1,
+  );
+  await expect(page.getByText("In preparation", { exact: true })).toHaveCount(
+    1,
+  );
+  await expect(page.getByText("Planned", { exact: true })).toHaveCount(2);
 });

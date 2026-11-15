@@ -1,143 +1,59 @@
-# Pathway AI Frontend
+# Pathway AI — Frontend
 
-Your future deserves more than a guess.
+**Live website: https://pathway-ai-frontend-roan.vercel.app**
 
-Pathway AI is an international education guide that is **in development**. This repository (`pathway-ai-frontend`) is the web frontend: Next.js (App Router), TypeScript (strict), Tailwind CSS and accessible Radix primitives. It talks to the separate Spring Boot API in [`pathway-ai-backend`](https://github.com/YunisSadig/pathway-ai-backend). There is no auth, account system or database client here.
+Pathway AI helps international students (from Azerbaijan, Kazakhstan, Georgia, Uzbekistan and Kyrgyzstan) plan studies abroad using **official, sourced information**. It never invents admission chances and never converts grades. Early release.
 
-## What exists today
+- Backend repository: https://github.com/YunisSadig/pathway-ai-backend (hosted on Render; database on Neon)
+- Status of the data: the real university catalogue is a **protected beta** (reuse terms of the official data are being confirmed), so it is open only to invited accounts.
 
-| Route                    | Purpose                                                                                                                        |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
-| `/`                      | Home: what Pathway AI is, what works now, where it is heading                                                                  |
-| `/universities`          | **Program-first discovery** (live): destination, then programs (default) or universities; filters, search, sorting, pagination |
-| `/universities/[slug]`   | University details and the programs it offers (live)                                                                           |
-| `/programs/[identifier]` | Program details: tuition, deadlines, admission requirements, official links and sources (live)                                 |
-| `/scholarships`          | Explains why funding differs. Honest empty state: there is no scholarship backend yet                                          |
-| `/how-it-works`          | The five stages, marked Available now, In preparation or Planned                                                               |
+## What works today
 
-The primary navigation is still exactly Home, Universities, Scholarships and How It Works. Program pages sit under the
-Universities experience (Universities stays highlighted).
+| Area                                                                                                                                                                                                                                                                                    | Status                                                                                 |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| Public site: home, About, How it works, Privacy, Terms, Contact                                                                                                                                                                                                                         | Working                                                                                |
+| Accounts: sign up, log in, log out, change password, delete account, data export                                                                                                                                                                                                        | Working (email verification and reset need an email provider: **not switched on yet**) |
+| Guided profile (six steps, autosave, resume, review): citizenship/residence, education (school, bachelor's, master's, graduated), grades on the scale printed on your transcript, skills, internships, volunteering, IELTS / TOEFL / SAT, destinations, tuition budget in 13 currencies | Working                                                                                |
+| Profile picture (crop, replace, remove)                                                                                                                                                                                                                                                 | Working                                                                                |
+| English and Russian, theme (System / Light / Dark) in Settings                                                                                                                                                                                                                          | Working (legal pages and the catalogue screens are English only)                       |
+| University and program discovery, saved items                                                                                                                                                                                                                                           | Protected beta (invited accounts)                                                      |
+| Scholarships, personalised matching / AI advice                                                                                                                                                                                                                                         | **Not built yet** (clearly labelled "coming soon")                                     |
 
-## Backend integration (implemented)
+## Stack
 
-The browser calls the Spring Boot API in `pathway-ai-backend` directly, through `src/lib/api`
-(`{NEXT_PUBLIC_API_BASE_URL}`):
+Next.js 16 (App Router, Cache Components), React 19, TypeScript, Tailwind CSS, Radix UI, Vitest + Testing Library, Playwright + axe. Deployed on **Vercel**.
 
-| Endpoint                            | Used for                                                          |
-| ----------------------------------- | ----------------------------------------------------------------- |
-| `GET /api/v1/programs`              | program list, filter choices (first 100 programs for the country) |
-| `GET /api/v1/programs/{identifier}` | program detail: tuition, intakes, requirements, sources           |
-| `GET /api/v1/universities`          | university list                                                   |
-| `GET /api/v1/universities/{slug}`   | university detail with its programs                               |
+The browser only talks to this site's own `/api/v1/*` route (`src/app/api/v1/[...path]/route.ts`), which forwards to the backend. The backend address and the staging key stay on the server; the student session is an HttpOnly cookie, never in `localStorage`.
 
-Scholarships have **no** API yet; that page stays an honest empty state and nothing is requested for it.
-
-Every filter lives in the URL, so views are shareable and the back button works:
-
-| URL parameter            | Meaning                                                               | API parameter                   |
-| ------------------------ | --------------------------------------------------------------------- | ------------------------------- |
-| `view`                   | `programs` (default) or `universities`                                | which endpoint                  |
-| `region`, `country`      | Destination. `country` is an EU member-state slug                     | `country` (ISO code)            |
-| `q`                      | Name search (max 100 characters)                                      | `q`                             |
-| `level`                  | `bachelor`, `master`, `doctorate`, `diploma`, `certificate`           | `level`                         |
-| `field`                  | Discipline (academic-field slug; the API includes child fields)       | `field`                         |
-| `language`               | Teaching language code                                                | `language`                      |
-| `tuitionMax`, `currency` | Maximum yearly tuition and its currency                               | `tuitionMax`, `tuitionCurrency` |
-| `sort`, `direction`      | programs: `name`, `university`, `level`; universities: `name`, `city` | `sort`, `direction`             |
-| `page`                   | One-based page (12 per page)                                          | `page` (zero-based)             |
-
-Invalid values are ignored, never forwarded.
-
-- The API filters by **one** country. A single-country region (US, Canada, China, South Korea, Japan) sends its ISO code. The EU alone asks you to choose a member state.
-- States: loading skeleton, empty (honest, with a way back), and error with **Try again** (unreachable, 4xx/5xx, malformed response, not configured). **The app never falls back to mock data.**
-- Types in `src/types` mirror the backend DTOs exactly. `npm run contract:check` compares them with a running backend (it passed against the local backend: 8 programs, 3 universities).
-
-### How facts are presented
-
-- **Unknown stays unknown:** a missing value reads "Not stated"; no placeholder, no `0`, no guess.
-- **Every changing fact cites its official source** and the date it was read. A program shows when it was last verified.
-- **Year-specific facts** (tuition, deadlines, requirements) carry the backend's `temporalStatus`: **Current**, **Outdated** (the period ended; shown muted with an explicit warning, never as today's price) or **Period not stated** (confirm independently). Tuition shows the currency code, the unit (per year, per semester, whole program), the applicant group as the university defines it, and the period in the source's own words.
-- **Links:** "Official program page" and "Official admissions information" are informational. An **Apply** button appears **only** when the API returns a verified active application link; otherwise the page says no verified link exists. No admissions probabilities, rankings, tuition savings or scholarship awards are shown or implied.
-- **Funding:** there is no scholarship data, so each program page says so instead of implying any.
-
-### Backend URL configuration
-
-| Variable                   | Example                 | Notes                                                                         |
-| -------------------------- | ----------------------- | ----------------------------------------------------------------------------- |
-| `NEXT_PUBLIC_API_BASE_URL` | `http://localhost:8080` | Origin only. **Public and inlined at build time**: rebuild after changing it. |
-
-Copy `.env.example` to `.env.local`. The browser calls the backend directly (cross-origin), so the backend must allow the frontend origin: set its `CORS_ALLOWED_ORIGINS` to the exact frontend origin (default `http://localhost:3000`; wildcards are refused). A wrong origin appears as "could not be reached", because browsers hide CORS failures from scripts. Never put a secret in a `NEXT_PUBLIC_*` variable; the API is public and read-only.
-
-### Troubleshooting: "The program service isn't configured"
-
-That message means `NEXT_PUBLIC_API_BASE_URL` was empty when the app started. Create `.env.local` (`cp .env.example .env.local`) and **restart `npm run dev`**: environment files are read once at startup. If instead the page says the service **could not be reached**, the variable is set but the backend is not running (or its CORS list lacks `http://localhost:3000`): start it as below and check `curl http://localhost:8080/actuator/health`.
-
-### Run both locally
-
-```bash
-# 1. Backend repo (JDK 21, Docker): see its README
-docker compose up -d
-IMPORT_REFERENCE_DATA=true ./mvnw spring-boot:run     # http://localhost:8080 ; imports the 8 source-cited programs
-
-# 2. This repo
-cp .env.example .env.local
-npm install
-npm run dev                                           # http://localhost:3000
-NEXT_PUBLIC_API_BASE_URL=http://localhost:8080 npm run contract:check   # optional: types vs the real API
-```
-
-Without the reference-data import the database is empty and the pages show honest empty states.
-
-## Product direction
-
-Pathway AI is becoming a global, program-first discovery platform for all disciplines and for bachelor and master degrees. See [docs/product/MVP_SPEC.md](docs/product/MVP_SPEC.md).
-
-## Repositories
-
-| Repository                                  | Responsibility                                           |
-| ------------------------------------------- | -------------------------------------------------------- |
-| `YunisSadig/pathway-ai-frontend` (this one) | Web UI: pages, navigation, theming, accessibility, tests |
-| `YunisSadig/pathway-ai-backend`             | Data and APIs: Java 21, Spring Boot, PostgreSQL, REST    |
-
-Backend changes are requested, never made from this repo.
-
-## Remaining limitations
-
-- **The data set is tiny** (8 source-cited programs, 3 universities in 2 countries). Most filters will return few results.
-- **No scholarships backend**, so no scholarship pages, eligibility or funding amounts.
-- **Filter choices** (disciplines, languages) are derived from the first 100 programs for the chosen destination, because the API has no facets endpoint (requested backend task: `GET /api/v1/fields`). Level and currency lists are static.
-- **No active Apply links yet:** the backend has no verified application portal URLs, so no Apply button is shown anywhere.
-- **No eligibility filter:** the API has no structured eligibility data to filter on.
-- **Nothing is deployed** and the backend is not hosted, so no full-stack production integration exists. See [docs/deployment.md](docs/deployment.md).
-- No student profiles, comparisons, pathways or AI guidance.
-
-## Getting started
+## Develop
 
 ```bash
 npm install
-npx playwright install chromium   # once, for browser tests
-npm run dev                        # http://localhost:3000
+npx playwright install chromium     # once
+npm run dev                         # http://localhost:3000
 ```
 
-## Scripts
+Create `.env.local` from `.env.example`. For a local backend set `NEXT_PUBLIC_API_BASE_URL=http://localhost:8080` (see the backend README); on Vercel it is `same-origin` plus the server-only `API_UPSTREAM_URL` and `API_STAGING_KEY`.
 
-| Command                     | Purpose                                                                     |
-| --------------------------- | --------------------------------------------------------------------------- |
-| `npm run dev`               | Start the dev server                                                        |
-| `npm run build`             | Production build                                                            |
-| `npm run check`             | Prettier check, ESLint, TypeScript, unit tests                              |
-| `npm test`                  | Vitest unit tests                                                           |
-| `npm run test:e2e`          | Playwright (desktop and mobile, axe). Intercepts the API: no backend needed |
-| `npm run contract:check`    | Compare the TypeScript types with a running backend's real responses        |
-| `npm run verify:deployment` | Health-check a deployed site and its API (pages, build wiring, CORS)        |
-| `npm run format`            | Format with Prettier                                                        |
+## Test
 
-E2E tests build the app with `NEXT_PUBLIC_API_BASE_URL=http://api.pathway.test` and fulfil that origin inside the browser with obviously synthetic fixtures (`tests/e2e/helpers/api.ts`). Those fixtures never ship in the app.
+| Command                                               | Purpose                                                                                                                                                              |
+| ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run check`                                       | Prettier, ESLint, TypeScript, unit tests                                                                                                                             |
+| `npm run test:e2e`                                    | Playwright on desktop and mobile with accessibility checks (the API is mocked in the browser; no backend needed). Stop anything already listening on port 3100 first |
+| `npm run test:live`                                   | Smoke test of the deployed site and the hosted API (creates and deletes a disposable account): `LIVE_SITE_URL=https://... npm run test:live`                         |
+| `npm run verify:deployment -- <site-url> same-origin` | Read-only deployment check (public pages, private-page redirects, closed catalogue)                                                                                  |
 
-## Theme behaviour
+## Deployment
 
-Only **Light** and **Dark** are offered. On a first visit the device preference is applied automatically; an explicit choice is then remembered (`pathway-theme` in localStorage). Older prototype data under `pathway-ai:store` is removed on load; no other storage is touched.
+Pull requests run CI (format, lint, types, unit, build, e2e). Merging to `main` deploys to Vercel through its Git integration; the workflow `verify-deployment` then waits for the merged commit (`/api/version`) and runs the deployment check and the live smoke test. Details: `docs/deployment.md`. The free backend sleeps when idle and can need up to about two minutes to wake: the interface shows progress and waits up to 140 s.
 
-## Data integrity
+## Principles
 
-Every institutional or scholarship fact must come from an official source and carry a source URL, a checked date and a verification status. Unknown values stay unknown. See [CONTRIBUTING.md](CONTRIBUTING.md).
+- Facts shown with their source; unknown stays unknown; no admission probabilities.
+- A grade is stored exactly as entered on its named scale; nothing is converted.
+- All visible text goes through `src/lib/i18n` (English source, Russian parity enforced by tests).
+
+## Contributing
+
+See `CONTRIBUTING.md` and `CLAUDE.md` (project rules). Use feature branches and pull requests; Conventional Commits; never commit secrets.

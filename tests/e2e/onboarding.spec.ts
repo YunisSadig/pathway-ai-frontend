@@ -530,7 +530,9 @@ test.describe("language and appearance", () => {
   }) => {
     const api = await signedIn(page);
     await page.goto("/profile/edit");
-    await page.getByRole("button", { name: "Русский" }).first().click();
+    await page.goto("/settings");
+    await page.getByRole("radio", { name: "Русский" }).click();
+    await page.goto("/profile/edit");
     await expect(
       page.getByRole("heading", { level: 2, name: "О вас" }),
     ).toBeVisible();
@@ -616,7 +618,9 @@ test.describe("quality", () => {
     page,
   }) => {
     await signedIn(page);
-    await page.getByRole("button", { name: "Русский" }).first().click();
+    await page.goto("/settings");
+    await page.getByRole("radio", { name: "Русский" }).click();
+    await page.goto("/profile/edit");
     for (const path of ["/profile", "/settings", "/dashboard"]) {
       await page.goto(path);
       await page.waitForTimeout(500);
