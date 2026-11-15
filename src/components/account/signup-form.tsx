@@ -13,6 +13,7 @@ import { useAccountConfig } from "@/lib/account/use-account-config";
 import { useSlowPhase } from "@/lib/account/use-slow-phase";
 import { useT } from "@/lib/i18n";
 import { safeNext, useSession } from "./session-provider";
+import { GoogleButton, GoogleNotice } from "./google-button";
 
 const MIN = 10;
 
@@ -100,112 +101,118 @@ export function SignupForm() {
   }
 
   return (
-    <form onSubmit={submit} noValidate className="grid gap-5">
-      {formError ? <Alert kind="error">{formError}</Alert> : null}
-      <Field id="email" label={t("auth.email")} error={errors.email}>
-        {(p) => (
-          <Input
-            {...p}
-            type="email"
-            name="email"
-            autoComplete="email"
-            inputMode="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-        )}
-      </Field>
-      <Field
-        id="displayName"
-        label={t("bg.name")}
-        optional
-        hint={t("bg.nameHint")}
-        error={errors.displayName}
-      >
-        {(p) => (
-          <Input
-            {...p}
-            type="text"
-            name="displayName"
-            autoComplete="given-name"
-            maxLength={80}
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-          />
-        )}
-      </Field>
-      <Field
-        id="password"
-        label={t("auth.password")}
-        hint={t("auth.passwordHint", { n: MIN, count: password.length })}
-        error={errors.password}
-      >
-        {(p) => (
-          <div className="flex gap-2">
+    <div className="grid gap-5">
+      <GoogleNotice />
+      <GoogleButton next={params.get("next")} />
+      <form onSubmit={submit} noValidate className="grid gap-5">
+        {formError ? <Alert kind="error">{formError}</Alert> : null}
+        <Field id="email" label={t("auth.email")} error={errors.email}>
+          {(p) => (
             <Input
               {...p}
-              type={show ? "text" : "password"}
-              name="password"
-              autoComplete="new-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              type="email"
+              name="email"
+              autoComplete="email"
+              inputMode="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               required
             />
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setShow((s) => !s)}
-              aria-pressed={show}
-            >
-              {show ? t("auth.hide") : t("auth.show")}
-            </Button>
-          </div>
-        )}
-      </Field>
-      <div className="grid gap-1.5">
-        <label className="flex cursor-pointer items-start gap-3 text-sm">
-          <input
-            type="checkbox"
-            name="agreed"
-            checked={agreed}
-            onChange={(e) => setAgreed(e.target.checked)}
-            aria-invalid={errors.agreed ? true : undefined}
-            aria-describedby={errors.agreed ? "agreed-error" : undefined}
-            className="mt-0.5 size-5 shrink-0 cursor-pointer accent-[var(--primary)]"
-          />
-          <span>
-            {t("auth.agreePrefix")}{" "}
-            <Link href="/terms" className="font-semibold underline">
-              {t("footer.terms")}
-            </Link>{" "}
-            {t("auth.agreeAnd")}{" "}
-            <Link href="/privacy" className="font-semibold underline">
-              {t("footer.privacy")}
-            </Link>
-            .
-          </span>
-        </label>
-        {errors.agreed ? (
-          <p id="agreed-error" className="text-sm font-medium text-danger">
-            <span className="sr-only">{t("common.error")}: </span>
-            {errors.agreed}
+          )}
+        </Field>
+        <Field
+          id="displayName"
+          label={t("bg.name")}
+          optional
+          hint={t("bg.nameHint")}
+          error={errors.displayName}
+        >
+          {(p) => (
+            <Input
+              {...p}
+              type="text"
+              name="displayName"
+              autoComplete="given-name"
+              maxLength={80}
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+            />
+          )}
+        </Field>
+        <Field
+          id="password"
+          label={t("auth.password")}
+          hint={t("auth.passwordHint", { n: MIN, count: password.length })}
+          error={errors.password}
+        >
+          {(p) => (
+            <div className="flex gap-2">
+              <Input
+                {...p}
+                type={show ? "text" : "password"}
+                name="password"
+                autoComplete="new-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShow((s) => !s)}
+                aria-pressed={show}
+              >
+                {show ? t("auth.hide") : t("auth.show")}
+              </Button>
+            </div>
+          )}
+        </Field>
+        <div className="grid gap-1.5">
+          <label className="flex cursor-pointer items-start gap-3 text-sm">
+            <input
+              type="checkbox"
+              name="agreed"
+              checked={agreed}
+              onChange={(e) => setAgreed(e.target.checked)}
+              aria-invalid={errors.agreed ? true : undefined}
+              aria-describedby={errors.agreed ? "agreed-error" : undefined}
+              className="mt-0.5 size-5 shrink-0 cursor-pointer accent-[var(--primary)]"
+            />
+            <span>
+              {t("auth.agreePrefix")}{" "}
+              <Link href="/terms" className="font-semibold underline">
+                {t("footer.terms")}
+              </Link>{" "}
+              {t("auth.agreeAnd")}{" "}
+              <Link href="/privacy" className="font-semibold underline">
+                {t("footer.privacy")}
+              </Link>
+              .
+            </span>
+          </label>
+          {errors.agreed ? (
+            <p id="agreed-error" className="text-sm font-medium text-danger">
+              <span className="sr-only">{t("common.error")}: </span>
+              {errors.agreed}
+            </p>
+          ) : null}
+        </div>
+        <Button type="submit" size="lg" disabled={pending}>
+          {pending ? t("auth.creating") : t("auth.createAccount")}
+        </Button>
+        <div role="status" aria-live="polite">
+          {phase > 0 ? (
+            <Alert kind="info">
+              {t(phase === 1 ? "auth.slow1" : "auth.slow2")}
+            </Alert>
+          ) : null}
+        </div>
+        {config && !config.emailDeliveryAvailable ? (
+          <p className="text-sm text-muted-foreground">
+            {t("auth.noEmailYet")}
           </p>
         ) : null}
-      </div>
-      <Button type="submit" size="lg" disabled={pending}>
-        {pending ? t("auth.creating") : t("auth.createAccount")}
-      </Button>
-      <div role="status" aria-live="polite">
-        {phase > 0 ? (
-          <Alert kind="info">
-            {t(phase === 1 ? "auth.slow1" : "auth.slow2")}
-          </Alert>
-        ) : null}
-      </div>
-      {config && !config.emailDeliveryAvailable ? (
-        <p className="text-sm text-muted-foreground">{t("auth.noEmailYet")}</p>
-      ) : null}
-    </form>
+      </form>
+    </div>
   );
 }

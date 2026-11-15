@@ -40,6 +40,11 @@ export const accountApi = {
       currentPassword,
       newPassword,
     }),
+  /** Step 0 of connecting Google: the signed-in owner proves the password; the answer is the same-site address that starts the trip. */
+  allowGoogleLink: (password: string) =>
+    apiSend<{ url: string }>("POST", `${BASE}/oauth/google/link`, {
+      password,
+    }),
   updateDisplayName: (displayName: string) =>
     apiSend<Account>("PATCH", `${BASE}/me`, { displayName }),
   deleteAccount: (password: string) => apiSend("DELETE", BASE, { password }),

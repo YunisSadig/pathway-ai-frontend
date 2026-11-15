@@ -157,6 +157,14 @@ async function forward(request: Request, { params }: Ctx): Promise<Response> {
   const visitor = clientAddress(request);
   if (visitor) headers["X-Client-IP"] = visitor;
 
+  // The two Google sign-in steps answer with a redirect that the browser must follow; nothing else may redirect.
+  const isOauthStep =
+    request.method === "GET" &&
+    path.length === 4 &&
+    path[0] === "account" &&
+    path[1] === "oauth" &&
+    path[2] === "google" &&
+    (path[3] === "start" || path[3] === "callback");
   let upstream: Response;
   try {
     upstream = await fetch(target, {
@@ -164,7 +172,7 @@ async function forward(request: Request, { params }: Ctx): Promise<Response> {
       headers,
       body: bytes ?? (body && body.length > 0 ? body : undefined),
       cache: "no-store",
-      redirect: "error",
+      redirect: isOauthStep ? "manual" : "error",
       signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
     });
   } catch {
@@ -202,6 +210,20 @@ async function forward(request: Request, { params }: Ctx): Promise<Response> {
   for (const setCookie of upstream.headers.getSetCookie()) {
     if (setCookie.startsWith(`${SESSION_COOKIE}=`))
       out.append("Set-Cookie", setCookie);
+  }
+  if (isOauthStep && upstream.status === 302) {
+    // only to this site (a page) or to Google's own authorization page: never an address an attacker could choose
+    const location = upstream.headers.get("location") ?? "";
+    const here = new URL(request.url).origin;
+    if (
+      !location.startsWith(`${here}/`) &&
+      !location.startsWith("https://accounts.google.com/o/oauth2/v2/auth?")
+    ) {
+      return problem(502, "The data service gave an unexpected answer.");
+    }
+    out.set("Location", location);
+    out.set("Referrer-Policy", "no-referrer");
+    return new Response(null, { status: 302, headers: out });
   }
   if (upstream.status === 304)
     return new Response(null, { status: 304, headers: out });

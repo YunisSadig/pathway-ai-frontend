@@ -404,6 +404,34 @@ export const en = {
     "Your academic details are edited in the guided profile.",
   "settings.changePicture": "Change picture",
   "settings.editProfile": "Edit full profile",
+  "auth.google.continue": "Continue with Google",
+  "auth.google.or": "or",
+  "auth.google.err.state":
+    "The Google sign-in expired or was interrupted. Please try again.",
+  "auth.google.err.cancelled": "Google sign-in was cancelled.",
+  "auth.google.err.failed":
+    "Google sign-in could not be completed. Please try again or use your email.",
+  "auth.google.err.conflict":
+    "An account with this email already exists. Log in with your password, then connect Google in Settings under Account & Security.",
+  "auth.google.err.unverified":
+    "Google did not confirm this email address, so an account cannot be created from it.",
+  "auth.google.err.unavailable": "Google sign-in is not available right now.",
+  "settings.googleTitle": "Google sign-in",
+  "settings.googleOnly":
+    "You sign in with Google, so this account has no password.",
+  "settings.googleLinked": "Google is connected to this account.",
+  "settings.googleHelp":
+    "Enter your password to connect your Google account. Afterwards you can sign in with either.",
+  "settings.googleConnect": "Connect Google",
+  "settings.googleNoDelete":
+    "An account that signs in with Google cannot be deleted from here yet. Contact us to have it removed.",
+  "settings.google.linked": "Google is now connected.",
+  "settings.google.taken":
+    "That Google account is already used by another Pathway AI account.",
+  "settings.google.expired":
+    "The connection took too long or was not started from this session. Please try again.",
+  "settings.google.cancelled": "Connecting Google was cancelled.",
+  "settings.google.failed": "Google could not be connected. Please try again.",
   "settings.appearance": "Appearance",
   "settings.appearanceHelp": "How Pathway AI looks on this device.",
   "settings.theme": "Theme",
