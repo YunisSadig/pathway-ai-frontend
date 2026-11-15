@@ -1,4 +1,4 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   RETRY_DELAYS_MS,
@@ -16,20 +16,21 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
 }));
 
-let controls: ReturnType<typeof useSession> | null = null;
-
 function Probe() {
   const session = useSession();
-  controls = session;
   const { state } = session;
   return (
-    <p data-testid="s">
-      {state.status === "authenticated"
-        ? `in:${state.user.email}`
-        : state.status === "anonymous"
-          ? `anon:${state.serviceError ? "unreachable" : "signed-out"}`
-          : "loading"}
-    </p>
+    <div>
+      <p data-testid="s">
+        {state.status === "authenticated"
+          ? `in:${state.user.email}`
+          : state.status === "anonymous"
+            ? `anon:${state.serviceError ? "unreachable" : "signed-out"}`
+            : "loading"}
+      </p>
+      <button onClick={() => session.signIn(ACCOUNT as never)}>sign-in</button>
+      <button onClick={() => void session.logout()}>sign-out</button>
+    </div>
   );
 }
 
@@ -42,6 +43,7 @@ const account = {
   catalogueAccess: false,
   createdAt: "2000-01-01T00:00:00Z",
 };
+const ACCOUNT = account;
 
 async function flush() {
   await act(async () => {
@@ -122,7 +124,7 @@ describe("a late answer never overrides a newer state", () => {
       </SessionProvider>,
     );
     await flush();
-    act(() => controls!.signIn(account as never)); // the person logged in while the first question was still open
+    fireEvent.click(screen.getByText("sign-in")); // the person logged in while the first question was still open
     expect(screen.getByTestId("s").textContent).toBe("in:a@example.test");
     await act(async () => {
       answer(new ApiError(401, "no session"));
@@ -144,7 +146,7 @@ describe("a late answer never overrides a newer state", () => {
     );
     await flush();
     await act(async () => {
-      await controls!.logout();
+      fireEvent.click(screen.getByText("sign-out"));
     });
     expect(screen.getByTestId("s").textContent).toBe("anon:signed-out");
     await act(async () => {
