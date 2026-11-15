@@ -416,6 +416,18 @@ export const ru: Record<Key, string> = {
   "auth.google.err.unverified":
     "Google не подтвердил этот адрес email, поэтому создать по нему аккаунт нельзя.",
   "auth.google.err.unavailable": "Вход через Google сейчас недоступен.",
+  "auth.link.title": "Подключите Google к своему аккаунту",
+  "auth.link.description":
+    "Один быстрый шаг, чтобы профиль и сохранённое остались вместе.",
+  "auth.link.explain":
+    "Аккаунт с адресом {email} уже существует. Один раз подтвердите пароль от Pathway AI, чтобы подключить Google. После этого можно входить любым способом.",
+  "auth.link.submit": "Подтвердить и подключить Google",
+  "auth.link.connecting": "Подключаем…",
+  "auth.link.cancel": "Отмена, вернуться назад",
+  "auth.link.expired":
+    "Этот шаг истёк или больше недоступен. Нажмите «Продолжить через Google» ещё раз или войдите по email.",
+  "auth.link.taken":
+    "Этот аккаунт Google нельзя подключить. Войдите по паролю.",
   "settings.googleTitle": "Вход через Google",
   "settings.googleOnly":
     "Вы входите через Google, поэтому у этого аккаунта нет пароля.",

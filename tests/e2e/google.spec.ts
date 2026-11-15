@@ -175,3 +175,166 @@ test.describe("Continue with Google on the login and sign-up pages", () => {
     await expect(button).toHaveAttribute("href", /oauth\/google\/start/);
   });
 });
+
+test.describe("An existing password account connecting Google once", () => {
+  const PASSWORD = "synthetic-pass-phrase-1";
+
+  /** The account API mock plus the two linking endpoints: the pending step exists until the right password arrives. */
+  async function withPendingLink(
+    page: import("@playwright/test").Page,
+    context: import("@playwright/test").BrowserContext,
+  ) {
+    const api = await mockAccountApi(page, { googleLoginAvailable: true });
+    api.accounts.push({
+      id: "p9",
+      email: "pat@example.test",
+      password: PASSWORD,
+      displayName: "Pat Student",
+    });
+    const state = { pending: true, misses: 0, sent: [] as string[] };
+    await page.route("**/api/v1/account/oauth/google/pending-link", (route) =>
+      state.pending
+        ? route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify({ email: "pat@example.test" }),
+          })
+        : route.fulfill({ status: 404, body: "" }),
+    );
+    await page.route(
+      "**/api/v1/account/oauth/google/confirm-link",
+      async (route) => {
+        const { password } = route.request().postDataJSON() as {
+          password: string;
+        };
+        state.sent.push(password);
+        if (!state.pending)
+          return route.fulfill({
+            status: 410,
+            contentType: "application/json",
+            body: JSON.stringify({ code: "LINK_EXPIRED", message: "expired" }),
+          });
+        if (password !== PASSWORD) {
+          state.misses += 1;
+          if (state.misses >= 2) state.pending = false;
+          return route.fulfill({
+            status: state.pending ? 403 : 403,
+            contentType: "application/json",
+            body: JSON.stringify({
+              code: "WRONG_PASSWORD",
+              message: "Your password is not correct.",
+            }),
+          });
+        }
+        state.pending = false;
+        api.current = api.accounts[0];
+        await context.addCookies([
+          {
+            name: "PATHWAY_SESSION",
+            value: "mock",
+            url: "http://localhost:3100",
+          },
+        ]);
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ next: "/dashboard" }),
+        });
+      },
+    );
+    return state;
+  }
+
+  test("the screen explains the one-time step, a wrong password is refused, the right one connects and signs in with the right name", async ({
+    page,
+    context,
+  }) => {
+    await withPendingLink(page, context);
+    await page.goto("/login/link-google");
+    await expect(
+      page.getByRole("heading", { name: "Connect Google to your account" }),
+    ).toBeVisible();
+    await expect(page.getByText(/pat@example\.test/)).toBeVisible();
+    await expect(page.getByText(/using either method/)).toBeVisible();
+    await page.getByLabel("Password").fill("not the password");
+    await page
+      .getByRole("button", { name: "Confirm and connect Google" })
+      .click();
+    await expect(
+      page.getByRole("alert").filter({ hasText: /not correct/ }),
+    ).toBeVisible();
+    await expect(page.getByLabel("Password")).toHaveValue(""); // never kept
+    await page.getByLabel("Password").fill(PASSWORD);
+    await page
+      .getByRole("button", { name: "Confirm and connect Google" })
+      .click();
+    await expect(page).toHaveURL(/\/dashboard/);
+    await expect(
+      page.getByRole("button", { name: "Account menu" }),
+    ).toContainText("Pat");
+  });
+
+  test("repeated wrong passwords end the step with an explanation and a way back, and nothing is connected", async ({
+    page,
+    context,
+  }) => {
+    const state = await withPendingLink(page, context);
+    await page.goto("/login/link-google");
+    for (let i = 0; i < 2; i++) {
+      await page.getByLabel("Password").fill(`wrong ${i}`);
+      await page
+        .getByRole("button", { name: "Confirm and connect Google" })
+        .click();
+      await expect(page.getByLabel("Password")).toHaveValue("");
+    }
+    // the server has dropped the step: the next try says it expired
+    await page.getByLabel("Password").fill("one more");
+    await page
+      .getByRole("button", { name: "Confirm and connect Google" })
+      .click();
+    await expect(
+      page.getByText(/expired or is no longer available/),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Log in" }).first(),
+    ).toBeVisible();
+    expect(state.pending).toBe(false);
+  });
+
+  test("without a parked step the page says it expired instead of showing a form, and it never offers to skip the password", async ({
+    page,
+  }) => {
+    await mockAccountApi(page, { googleLoginAvailable: true });
+    await page.route("**/api/v1/account/oauth/google/pending-link", (route) =>
+      route.fulfill({ status: 404, body: "" }),
+    );
+    await page.goto("/login/link-google");
+    await expect(
+      page.getByText(/expired or is no longer available/),
+    ).toBeVisible();
+    await expect(page.getByLabel("Password")).toHaveCount(0);
+  });
+
+  for (const scheme of ["light", "dark"] as const) {
+    test(`the linking screen is accessible and fits a phone (${scheme})`, async ({
+      page,
+      context,
+    }) => {
+      await withPendingLink(page, context);
+      await page.setViewportSize({ width: 360, height: 740 });
+      await page.emulateMedia({ colorScheme: scheme });
+      await page.goto("/login/link-google");
+      await expect(page.getByLabel("Password")).toBeVisible();
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth - window.innerWidth,
+      );
+      expect(overflow).toBeLessThanOrEqual(0);
+      const results = await new AxeBuilder({ page })
+        .withTags(["wcag2a", "wcag2aa"])
+        .analyze();
+      expect(
+        results.violations.map((v) => `${v.id}: ${v.nodes[0]?.html}`),
+      ).toEqual([]);
+    });
+  }
+});
