@@ -278,7 +278,7 @@ test.describe("program details", () => {
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(
       "Synthetic Program 01",
     );
-    await expect(page.getByText(/last checked 2 Jan 2026/)).toBeVisible();
+    await expect(page.getByText(/verified on 2 Jan 2026/)).toBeVisible();
 
     const tuition = page.getByRole("region", { name: "Tuition & funding" });
     await tuition
@@ -453,6 +453,14 @@ test.describe("program details", () => {
     });
     await expect(apply).toHaveAttribute("href", "https://example.test/apply/2");
     await expect(apply).toHaveAttribute("rel", /noopener/);
+    const destinations = page.getByLabel("Official program destinations");
+    await expect(destinations.getByRole("link").first()).toHaveText(
+      /View official university program/,
+    );
+    await expect(destinations.getByRole("link").first()).toHaveAttribute(
+      "target",
+      "_blank",
+    );
     const req = page.getByRole("region", { name: "Admissions" });
     await expect(
       req.getByRole("heading", { name: "Language proficiency" }),

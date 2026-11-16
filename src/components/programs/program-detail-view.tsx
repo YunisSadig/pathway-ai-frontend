@@ -10,12 +10,11 @@ import {
   MapPin,
   TriangleAlert,
 } from "lucide-react";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import {
   DataRow,
   DataRows,
   DetailSection,
-  Notice,
 } from "@/components/shared/detail-ui";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ErrorState } from "@/components/shared/error-state";
@@ -27,6 +26,7 @@ import { isGateStatus } from "@/components/shared/catalogue-protected";
 import { API_NOT_CONFIGURED } from "@/lib/api/client";
 import { getProgram } from "@/lib/api/programs";
 import { PublicProgramDetail } from "./public-program-detail";
+import { ProgramDestinations } from "./program-destinations";
 import {
   byTemporalStatus,
   DEGREE_LABELS,
@@ -314,51 +314,13 @@ function ProgramDetailContent({ p }: { p: ProgramDetail }) {
                   <TriangleAlert aria-hidden className="size-4" />
                 )}
                 {verified
-                  ? `Verified from official pages · last checked ${formatDate(verification.verifiedOn)}`
+                  ? `Program identity verified · verified on ${formatDate(verification.verifiedOn)}`
                   : "Not verified against official pages"}
               </p>
             </div>
 
             <div className="grid gap-3 sm:max-w-sm lg:min-w-64">
-              {p.officialApplicationUrl ? (
-                <a
-                  href={p.officialApplicationUrl}
-                  rel="noopener noreferrer"
-                  target="_blank"
-                  className={cn(buttonVariants({ size: "lg" }))}
-                >
-                  Apply on the official page
-                  <span className="sr-only"> (opens in a new tab)</span>
-                </a>
-              ) : null}
-              {p.officialAdmissionsUrl ? (
-                <a
-                  href={p.officialAdmissionsUrl}
-                  rel="noopener noreferrer"
-                  target="_blank"
-                  className={cn(
-                    buttonVariants({
-                      size: "lg",
-                      variant: p.officialApplicationUrl ? "outline" : "primary",
-                    }),
-                  )}
-                >
-                  Official admissions information
-                  <span className="sr-only"> (opens in a new tab)</span>
-                </a>
-              ) : null}
-              {p.officialProgramUrl ? (
-                <ExternalLink href={p.officialProgramUrl}>
-                  Official program page
-                </ExternalLink>
-              ) : null}
-              {!p.officialApplicationUrl ? (
-                <Notice className="max-w-xs">
-                  {p.officialAdmissionsUrl
-                    ? "There is no verified application link for the current cycle, so no Apply button is shown. Use the admissions information to see how and when to apply."
-                    : "There is no verified application link for the current cycle, so no Apply button is shown. Check the university's official website for how and when to apply."}
-                </Notice>
-              ) : null}
+              <ProgramDestinations {...p} />
             </div>
           </div>
         </div>

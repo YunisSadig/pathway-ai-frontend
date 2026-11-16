@@ -378,7 +378,16 @@ export const en = {
   "pubprog.campus": "Campus city",
   "pubprog.verified": "Record last verified",
   "pubprog.checked": "Official source last checked",
-  "pubprog.official": "Official program page",
+  "pubprog.official": "View official university program",
+  "programLinks.destinations": "Official program destinations",
+  "programLinks.apply": "Apply on the official page",
+  "programLinks.newTab": "(opens in a new tab)",
+  "programLinks.unknown":
+    "A university-owned program page has not been verified yet.",
+  "programLinks.noApplication":
+    "There is no verified application link for the current cycle. Check the university's admissions instructions for how and when to apply.",
+  "programLinks.studyinfo":
+    "Applications for this program are submitted through Studyinfo, Finland's national application portal.",
   "pubprog.admissions": "Official admissions information",
   "pubprog.limitsTitle": "Fees, deadlines and requirements",
   "pubprog.limitsBody":

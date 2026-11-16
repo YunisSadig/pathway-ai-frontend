@@ -379,7 +379,16 @@ export const ru: Record<Key, string> = {
   "pubprog.campus": "Город кампуса",
   "pubprog.verified": "Запись проверена",
   "pubprog.checked": "Официальный источник проверен",
-  "pubprog.official": "Официальная страница программы",
+  "pubprog.official": "Программа на сайте университета",
+  "programLinks.destinations": "Официальные ссылки программы",
+  "programLinks.apply": "Подать заявку на официальном сайте",
+  "programLinks.newTab": "(откроется в новой вкладке)",
+  "programLinks.unknown":
+    "Страница программы на сайте университета пока не проверена.",
+  "programLinks.noApplication":
+    "Проверенной ссылки для подачи заявки в текущем цикле нет. Уточните порядок и сроки в инструкциях университета.",
+  "programLinks.studyinfo":
+    "Заявки на эту программу подаются через Studyinfo — национальный портал Финляндии.",
   "pubprog.admissions": "Официальная информация о приёме",
   "pubprog.limitsTitle": "Стоимость, сроки и требования",
   "pubprog.limitsBody":

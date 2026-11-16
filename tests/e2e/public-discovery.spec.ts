@@ -215,7 +215,7 @@ test.describe("a visitor can explore universities without an account", () => {
       page.getByRole("heading", { level: 1, name: "Synthetic Physics" }),
     ).toBeVisible();
     await expect(
-      page.getByRole("link", { name: /Official program page/ }),
+      page.getByRole("link", { name: /View official university program/ }),
     ).toHaveAttribute("href", "https://example.test/alpha/physics");
     await expect(
       page
