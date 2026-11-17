@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { ExternalLink } from "lucide-react";
 import { useEffect, useState } from "react";
 import { CatalogueProtected } from "@/components/shared/catalogue-protected";
 import { SaveButton } from "@/components/saved/save-button";
@@ -11,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { getPublicProgram } from "@/lib/api/programs";
 import { dateLabel, useT } from "@/lib/i18n";
 import type { ProgramListItem } from "@/types/program";
+import { degreeLabelKey } from "./degree-pathway";
+import { ProgramDestinations } from "./program-destinations";
 
 /**
  * A program for everyone: the published offering (what the official Konfo API exists to display) with links to the OFFICIAL pages.
@@ -49,13 +50,34 @@ export function PublicProgramDetail({
 
   const facts: [string, string | null][] = [
     [t("pubprog.university"), p.university.name],
-    [t("pubprog.level"), p.degreeLevel.toLowerCase()],
+    [
+      t("pubprog.level"),
+      (() => {
+        const key = degreeLabelKey(p.degreeLevel, p.qualificationPathway);
+        return key ? t(key) : p.degreeLevel.toLowerCase();
+      })(),
+    ],
     [t("pubprog.field"), p.field?.name ?? null],
+    [
+      t("pubprog.studyTrack"),
+      p.studyOption
+        ? t("unifact.studyOption", { option: p.studyOption })
+        : null,
+    ],
     [
       t("pubprog.duration"),
       p.durationMonths ? t("pubprog.months", { n: p.durationMonths }) : null,
     ],
-    [t("pubprog.languages"), p.teachingLanguages.join(", ") || null],
+    [
+      t("pubprog.languages"),
+      p.teachingLanguages
+        .map(
+          (code) =>
+            new Intl.DisplayNames([lang], { type: "language" }).of(code) ??
+            code,
+        )
+        .join(", ") || null,
+    ],
     [t("pubprog.campus"), p.campusCity],
     [
       t("pubprog.checked"),
@@ -76,35 +98,24 @@ export function PublicProgramDetail({
         <h1 className="mt-2 title-page">{p.name}</h1>
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <SaveButton kind="program" id={p.identifier} />
-          {p.officialProgramUrl ? (
-            <Button asChild variant="outline" size="sm">
-              <a
-                href={p.officialProgramUrl}
-                rel="noopener noreferrer"
-                target="_blank"
-              >
-                {t("pubprog.official")} <ExternalLink aria-hidden />
-              </a>
-            </Button>
-          ) : null}
-          {p.officialAdmissionsUrl ? (
-            <Button asChild variant="outline" size="sm">
-              <a
-                href={p.officialAdmissionsUrl}
-                rel="noopener noreferrer"
-                target="_blank"
-              >
-                {t("pubprog.admissions")} <ExternalLink aria-hidden />
-              </a>
-            </Button>
-          ) : null}
           <Button asChild variant="link" size="link">
             <Link href={`/universities/${p.university.slug}`}>
               {t("catalogue.viewUniversity", { name: p.university.name })}
             </Link>
           </Button>
         </div>
+        <div className="mt-5 max-w-sm">
+          <ProgramDestinations
+            officialProgramUrl={p.officialProgramUrl}
+            officialAdmissionsUrl={p.officialAdmissionsUrl}
+            showApplicationStatus={false}
+            programLinkStatus={p.programLinkStatus ?? null}
+          />
+        </div>
       </header>
+      {p.catalogMembership === "OUTSIDE_CURATED_CATALOG" ? (
+        <Alert kind="info" title={t("unifact.outside")} />
+      ) : null}
       <section className="card p-6">
         <dl className="grid gap-3 text-sm sm:grid-cols-[12rem_1fr]">
           {facts.map(([label, value]) => (

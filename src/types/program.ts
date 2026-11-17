@@ -72,6 +72,12 @@ export interface ProgramListItem {
   verification: Verification;
   /** Public program detail only: the day the official source was last read successfully (a source check, not a change of facts). */
   lastCheckedOn?: string | null;
+  catalogMembership?: "CURATED" | "OUTSIDE_CURATED_CATALOG" | "UNRESTRICTED";
+  /** Public program detail only (curated programs): see UniversityInformationBlock. */
+  qualificationPathway?: "BACHELOR_AND_MASTER" | "SINGLE_DEGREE" | null;
+  studyOption?: string | null;
+  /** Public program detail only: health of the university program page from the weekly link check. */
+  programLinkStatus?: LinkStatus | null;
 }
 
 export interface SourceRef {
@@ -126,6 +132,67 @@ export interface ProgramDetail extends ProgramListItem {
   intakes: Intake[];
   tuition: Tuition[];
   requirements: Requirement[];
+  universityInformation?: UniversityInformationBlock | null;
+  catalogMembership?: "CURATED" | "OUTSIDE_CURATED_CATALOG" | "UNRESTRICTED";
+}
+
+/** Health of an official destination, from the backend's weekly link check. */
+export type LinkStatus =
+  | "VERIFIED"
+  | "REDIRECTED_VERIFIED"
+  | "REPLACEMENT_VERIFIED"
+  | "STALE"
+  | "BROKEN"
+  | "SOURCE_UNAVAILABLE"
+  | "PENDING_REVIEW";
+
+export interface LinkCheck {
+  linkType: "PROGRAM_PAGE" | "ADMISSIONS_PAGE" | "APPLICATION_PORTAL";
+  status: LinkStatus;
+  lastCheckedAt: string | null;
+  lastVerifiedAt: string | null;
+}
+
+export interface UniversityInformationBlock {
+  facts: UniversityFact[];
+  sources: UniversitySourceCheck[];
+  /** Curated membership only: a combined bachelor + master pathway or a single degree. */
+  qualificationPathway?: "BACHELOR_AND_MASTER" | "SINGLE_DEGREE" | null;
+  /** A study option of the parent degree that the source names (e.g. Helsinki Science). */
+  studyOption?: string | null;
+  linkChecks?: LinkCheck[];
+}
+
+/** Statuses under which a destination must not be presented as verified. */
+export const UNVERIFIED_LINK: ReadonlySet<LinkStatus> = new Set([
+  "STALE",
+  "BROKEN",
+  "PENDING_REVIEW",
+]);
+
+export interface UniversityFact {
+  field: string;
+  scope: string;
+  value: string;
+  applicationCycle: string | null;
+  temporalStatus: TemporalStatus;
+  verificationStatus: "VERIFIED" | "PENDING_REVIEW" | "STALE";
+  lastSuccessfulCheck: string;
+  source: SourceRef;
+  /** Only when the source states it, e.g. NON_EU_EEA for a fee. */
+  applicantCategory?: "NON_EU_EEA" | "EU_EEA" | "ALL" | null;
+  /** Only when the source states it; a fee without a year stays UNKNOWN_YEAR. */
+  academicYear?: string | null;
+}
+
+export interface UniversitySourceCheck {
+  url: string;
+  publisher: string | null;
+  status: string;
+  lastAttemptAt: string | null;
+  lastSuccessAt: string | null;
+  nextCheckAt: string | null;
+  method: string;
 }
 
 export type ProgramSort = "name" | "university" | "level";

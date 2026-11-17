@@ -10,7 +10,7 @@ import {
   MapPin,
   TriangleAlert,
 } from "lucide-react";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import {
   DataRow,
   DataRows,
@@ -27,6 +27,13 @@ import { isGateStatus } from "@/components/shared/catalogue-protected";
 import { API_NOT_CONFIGURED } from "@/lib/api/client";
 import { getProgram } from "@/lib/api/programs";
 import { PublicProgramDetail } from "./public-program-detail";
+import { ProgramDestinations } from "./program-destinations";
+import {
+  UniversityInformation,
+  UniversitySourceChecks,
+} from "./university-information";
+import { degreeLabelKey } from "./degree-pathway";
+import { useT } from "@/lib/i18n";
 import {
   byTemporalStatus,
   DEGREE_LABELS,
@@ -214,13 +221,24 @@ function tuitionFact(p: ProgramDetail): {
 }
 
 function ProgramDetailContent({ p }: { p: ProgramDetail }) {
+  const { t } = useT();
   const { university, verification } = p;
+  const uniFacts = p.universityInformation?.facts ?? [];
+  const has = (...fields: string[]) =>
+    uniFacts.some((fact) => fields.includes(fact.field));
   const place = [university.city, university.countryName]
     .filter(Boolean)
     .join(", ");
   const verified =
     verification.status === "VERIFIED" && verification.verifiedOn;
-  const tuition = tuitionFact(p);
+  const tuition =
+    p.tuition.length === 0 && has("tuition_scope")
+      ? {
+          value: t("unifact.feeSummary"),
+          detail: t("unifact.feeDetail"),
+          muted: true,
+        }
+      : tuitionFact(p);
   const deadline = nextDeadline(p.intakes);
   const undatedCycle = p.intakes.some(
     (i) => i.temporalStatus === "UNKNOWN_YEAR",
@@ -230,6 +248,9 @@ function ProgramDetailContent({ p }: { p: ProgramDetail }) {
     { id: "tuition", label: "Tuition & funding" },
     { id: "admissions", label: "Admissions" },
     ...(p.intakes.length ? [{ id: "deadlines", label: "Deadlines" }] : []),
+    ...(has("structure", "curriculum_url")
+      ? [{ id: "structure", label: t("unifact.structureTitle") }]
+      : []),
     ...(p.sources.length ? [{ id: "sources", label: "Sources" }] : []),
   ];
   const currentRequirements = p.requirements.filter(
@@ -268,10 +289,23 @@ function ProgramDetailContent({ p }: { p: ProgramDetail }) {
           <div className="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
             <div className="min-w-0">
               <p className="eyebrow">
-                {DEGREE_LABELS[p.degreeLevel]}
+                {(() => {
+                  const key = degreeLabelKey(
+                    p.degreeLevel,
+                    p.universityInformation?.qualificationPathway,
+                  );
+                  return key ? t(key) : DEGREE_LABELS[p.degreeLevel];
+                })()}
                 {p.field ? ` · ${p.field.name}` : ""}
               </p>
               <h1 className="mt-2 max-w-3xl title-page">{p.name}</h1>
+              {p.universityInformation?.studyOption ? (
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {t("unifact.studyOption", {
+                    option: p.universityInformation.studyOption,
+                  })}
+                </p>
+              ) : null}
               <div className="mt-4">
                 <SaveButton kind="program" id={p.identifier} />
               </div>
@@ -314,51 +348,20 @@ function ProgramDetailContent({ p }: { p: ProgramDetail }) {
                   <TriangleAlert aria-hidden className="size-4" />
                 )}
                 {verified
-                  ? `Verified from official pages · last checked ${formatDate(verification.verifiedOn)}`
+                  ? `Program identity verified · verified on ${formatDate(verification.verifiedOn)}`
                   : "Not verified against official pages"}
               </p>
             </div>
 
             <div className="grid gap-3 sm:max-w-sm lg:min-w-64">
-              {p.officialApplicationUrl ? (
-                <a
-                  href={p.officialApplicationUrl}
-                  rel="noopener noreferrer"
-                  target="_blank"
-                  className={cn(buttonVariants({ size: "lg" }))}
-                >
-                  Apply on the official page
-                  <span className="sr-only"> (opens in a new tab)</span>
-                </a>
-              ) : null}
-              {p.officialAdmissionsUrl ? (
-                <a
-                  href={p.officialAdmissionsUrl}
-                  rel="noopener noreferrer"
-                  target="_blank"
-                  className={cn(
-                    buttonVariants({
-                      size: "lg",
-                      variant: p.officialApplicationUrl ? "outline" : "primary",
-                    }),
-                  )}
-                >
-                  Official admissions information
-                  <span className="sr-only"> (opens in a new tab)</span>
-                </a>
-              ) : null}
-              {p.officialProgramUrl ? (
-                <ExternalLink href={p.officialProgramUrl}>
-                  Official program page
-                </ExternalLink>
-              ) : null}
-              {!p.officialApplicationUrl ? (
-                <Notice className="max-w-xs">
-                  {p.officialAdmissionsUrl
-                    ? "There is no verified application link for the current cycle, so no Apply button is shown. Use the admissions information to see how and when to apply."
-                    : "There is no verified application link for the current cycle, so no Apply button is shown. Check the university's official website for how and when to apply."}
-                </Notice>
-              ) : null}
+              <ProgramDestinations
+                {...p}
+                programLinkStatus={
+                  p.universityInformation?.linkChecks?.find(
+                    (l) => l.linkType === "PROGRAM_PAGE",
+                  )?.status ?? null
+                }
+              />
             </div>
           </div>
         </div>
@@ -403,16 +406,30 @@ function ProgramDetailContent({ p }: { p: ProgramDetail }) {
             }
           >
             {currentRequirements === 0
-              ? "Requirements not published"
+              ? has(
+                  "eligibility",
+                  "documents",
+                  "language_tests",
+                  "entrance_tests",
+                  "selection",
+                )
+                ? t("unifact.admissionsSummary")
+                : "Requirements not published"
               : `${currentRequirements} published requirement${currentRequirements > 1 ? "s" : ""}`}
           </KeyFact>
           <KeyFact
             label="Funding"
             href="#tuition"
             muted
-            detail="No scholarship or waiver is assumed."
+            detail={
+              has("scholarship")
+                ? t("unifact.fundingDetail")
+                : "No scholarship or waiver is assumed."
+            }
           >
-            No verified information
+            {has("scholarship")
+              ? t("unifact.fundingSummary")
+              : "No verified information"}
           </KeyFact>
         </dl>
       </div>
@@ -422,6 +439,9 @@ function ProgramDetailContent({ p }: { p: ProgramDetail }) {
       </div>
 
       <div className="page-container pb-12">
+        {p.catalogMembership === "OUTSIDE_CURATED_CATALOG" ? (
+          <Notice className="mt-6">{t("unifact.outside")}</Notice>
+        ) : null}
         <DetailSection id="overview" title="Overview">
           <DataRows>
             <DataRow label="Discipline">{p.field?.name ?? NOT_STATED}</DataRow>
@@ -436,6 +456,20 @@ function ProgramDetailContent({ p }: { p: ProgramDetail }) {
             </DataRow>
             <DataRow label="Campus city">{p.campusCity ?? NOT_STATED}</DataRow>
           </DataRows>
+          <div className="mt-6">
+            <UniversityInformation
+              facts={uniFacts}
+              fields={[
+                "overview",
+                "qualification",
+                "credits",
+                "duration_structure",
+                "study_mode",
+                "campus",
+                "specializations",
+              ]}
+            />
+          </div>
         </DetailSection>
 
         <DetailSection
@@ -446,13 +480,26 @@ function ProgramDetailContent({ p }: { p: ProgramDetail }) {
           <div className="grid gap-8">
             <div>
               <h3 className="mb-4 text-base font-bold">Tuition</h3>
-              <TuitionList tuition={p.tuition} />
+              {p.tuition.length || !has("tuition_scope") ? (
+                <TuitionList tuition={p.tuition} />
+              ) : null}
+              <UniversityInformation
+                facts={uniFacts}
+                fields={["tuition_scope", "financial_url"]}
+              />
             </div>
             <div className="border-t border-border pt-6">
               <h3 className="mb-3 text-base font-bold">
                 Scholarships and funding
               </h3>
-              <FundingList />
+              {has("scholarship") ? (
+                <UniversityInformation
+                  facts={uniFacts}
+                  fields={["scholarship"]}
+                />
+              ) : (
+                <FundingList />
+              )}
             </div>
           </div>
         </DetailSection>
@@ -462,7 +509,29 @@ function ProgramDetailContent({ p }: { p: ProgramDetail }) {
           title="Admissions"
           intro="What the university publishes about applying."
         >
-          <RequirementGroups requirements={byTemporalStatus(p.requirements)} />
+          {p.requirements.length ||
+          !has(
+            "eligibility",
+            "documents",
+            "language_tests",
+            "entrance_tests",
+            "selection",
+          ) ? (
+            <RequirementGroups
+              requirements={byTemporalStatus(p.requirements)}
+            />
+          ) : null}
+          <UniversityInformation
+            facts={uniFacts}
+            fields={[
+              "eligibility",
+              "documents",
+              "language_tests",
+              "entrance_tests",
+              "selection",
+              "instructions",
+            ]}
+          />
         </DetailSection>
 
         {p.intakes.length ? (
@@ -471,7 +540,22 @@ function ProgramDetailContent({ p }: { p: ProgramDetail }) {
             title="Deadlines & intakes"
             intro="Dates change every year. Confirm them on the official page."
           >
-            <DeadlineTimeline intakes={p.intakes} />
+            <UniversityInformation
+              facts={uniFacts}
+              fields={["application_period"]}
+            />
+            <div className="mt-6">
+              <DeadlineTimeline intakes={p.intakes} />
+            </div>
+          </DetailSection>
+        ) : null}
+
+        {has("structure", "curriculum_url") ? (
+          <DetailSection id="structure" title={t("unifact.structureTitle")}>
+            <UniversityInformation
+              facts={uniFacts}
+              fields={["structure", "curriculum_url"]}
+            />
           </DetailSection>
         ) : null}
 
@@ -497,6 +581,9 @@ function ProgramDetailContent({ p }: { p: ProgramDetail }) {
                 </li>
               ))}
             </ul>
+            <UniversitySourceChecks
+              sources={p.universityInformation?.sources ?? []}
+            />
             <details className="group mt-6 text-sm">
               <summary className="min-h-6 cursor-pointer font-semibold underline decoration-dotted underline-offset-4">
                 How to read this page

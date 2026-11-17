@@ -126,6 +126,9 @@ const main = async () => {
       "intakes",
       "tuition",
       "requirements",
+      "synchronization",
+      "universityInformation",
+      "catalogMembership",
     ]);
     d.sources.forEach((s, i) => source(`${w}.sources[${i}]`, s));
     d.intakes.forEach((x, i) => {
