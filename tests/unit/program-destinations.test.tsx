@@ -23,8 +23,10 @@ describe("program destinations", () => {
     const anchors = screen.getAllByRole("link");
     expect(anchors[0]).toHaveTextContent("View official university program");
     expect(anchors[0]).toHaveAttribute("href", links.officialProgramUrl);
-    expect(anchors[1]).toHaveTextContent("Official admissions information");
-    expect(anchors[2]).toHaveTextContent("Apply on the official page");
+    expect(anchors[1]).toHaveTextContent("Admissions and requirements");
+    expect(anchors[2]).toHaveTextContent(
+      "Apply via Studyinfo — official application portal",
+    );
     expect(screen.getByText(/national application portal/)).toBeVisible();
     for (const anchor of anchors) {
       expect(anchor).toHaveAttribute("target", "_blank");

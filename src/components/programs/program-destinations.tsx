@@ -3,6 +3,7 @@
 import { ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/lib/i18n";
+import { UNVERIFIED_LINK, type LinkStatus } from "@/types/program";
 
 function destination(value: string | null): URL | null {
   if (!value) return null;
@@ -26,21 +27,35 @@ export function ProgramDestinations({
   officialAdmissionsUrl,
   officialApplicationUrl = null,
   showApplicationStatus = true,
+  programLinkStatus = null,
 }: {
   officialProgramUrl: string | null;
   officialAdmissionsUrl: string | null;
   officialApplicationUrl?: string | null;
   showApplicationStatus?: boolean;
+  /** From the weekly link check; a stale, broken or pending page is never shown as the verified destination. */
+  programLinkStatus?: LinkStatus | null;
 }) {
   const { t } = useT();
   const candidate = destination(officialProgramUrl);
-  const program = nationalPortal(candidate) ? null : candidate;
+  const university = nationalPortal(candidate) ? null : candidate;
+  const unverified =
+    !!programLinkStatus && UNVERIFIED_LINK.has(programLinkStatus);
+  const program = unverified ? null : university;
   const admissions = destination(officialAdmissionsUrl);
   const application = destination(officialApplicationUrl);
   const links = [
     { url: program, label: t("pubprog.official"), primary: true },
     { url: admissions, label: t("pubprog.admissions"), primary: false },
-    { url: application, label: t("programLinks.apply"), primary: false },
+    {
+      url: application,
+      label: t(
+        nationalPortal(application)
+          ? "programLinks.applyStudyinfo"
+          : "programLinks.apply",
+      ),
+      primary: false,
+    },
   ];
 
   return (
@@ -56,7 +71,22 @@ export function ProgramDestinations({
           </Button>
         ) : null,
       )}
-      {!program ? (
+      {unverified && university ? (
+        <>
+          <p className="text-sm text-muted-foreground" role="status">
+            {t("programLinks.reverifying")}
+          </p>
+          <a
+            href={university.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm underline underline-offset-4"
+          >
+            {t("programLinks.lastKnown")}
+            <span className="sr-only"> {t("programLinks.newTab")}</span>
+          </a>
+        </>
+      ) : !program ? (
         <p className="text-sm text-muted-foreground">
           {t("programLinks.unknown")}
         </p>

@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { getPublicProgram } from "@/lib/api/programs";
 import { dateLabel, useT } from "@/lib/i18n";
 import type { ProgramListItem } from "@/types/program";
+import { degreeLabelKey } from "./degree-pathway";
 import { ProgramDestinations } from "./program-destinations";
 
 /**
@@ -49,13 +50,34 @@ export function PublicProgramDetail({
 
   const facts: [string, string | null][] = [
     [t("pubprog.university"), p.university.name],
-    [t("pubprog.level"), p.degreeLevel.toLowerCase()],
+    [
+      t("pubprog.level"),
+      (() => {
+        const key = degreeLabelKey(p.degreeLevel, p.qualificationPathway);
+        return key ? t(key) : p.degreeLevel.toLowerCase();
+      })(),
+    ],
     [t("pubprog.field"), p.field?.name ?? null],
+    [
+      t("pubprog.studyTrack"),
+      p.studyOption
+        ? t("unifact.studyOption", { option: p.studyOption })
+        : null,
+    ],
     [
       t("pubprog.duration"),
       p.durationMonths ? t("pubprog.months", { n: p.durationMonths }) : null,
     ],
-    [t("pubprog.languages"), p.teachingLanguages.join(", ") || null],
+    [
+      t("pubprog.languages"),
+      p.teachingLanguages
+        .map(
+          (code) =>
+            new Intl.DisplayNames([lang], { type: "language" }).of(code) ??
+            code,
+        )
+        .join(", ") || null,
+    ],
     [t("pubprog.campus"), p.campusCity],
     [
       t("pubprog.checked"),
@@ -87,9 +109,13 @@ export function PublicProgramDetail({
             officialProgramUrl={p.officialProgramUrl}
             officialAdmissionsUrl={p.officialAdmissionsUrl}
             showApplicationStatus={false}
+            programLinkStatus={p.programLinkStatus ?? null}
           />
         </div>
       </header>
+      {p.catalogMembership === "OUTSIDE_CURATED_CATALOG" ? (
+        <Alert kind="info" title={t("unifact.outside")} />
+      ) : null}
       <section className="card p-6">
         <dl className="grid gap-3 text-sm sm:grid-cols-[12rem_1fr]">
           {facts.map(([label, value]) => (

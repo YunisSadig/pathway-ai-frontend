@@ -336,7 +336,7 @@ test.describe("program details", () => {
     await expect(page.getByText(/no verified application link/i)).toBeVisible();
     // the informational admissions page is offered instead, clearly labelled
     await expect(
-      page.getByRole("link", { name: /Official admissions information/ }),
+      page.getByRole("link", { name: /Admissions and requirements/ }),
     ).toHaveAttribute("href", "https://example.test/admissions/1");
   });
 

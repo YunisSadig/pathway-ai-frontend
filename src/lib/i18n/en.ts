@@ -379,6 +379,53 @@ export const en = {
   "pubprog.verified": "Record last verified",
   "pubprog.checked": "Official source last checked",
   "pubprog.official": "View official university program",
+  "unifact.qualification": "Awarded qualifications",
+  "unifact.credits": "ECTS credits",
+  "unifact.duration": "Qualification structure and duration",
+  "unifact.mode": "Study mode",
+  "unifact.campus": "Campus",
+  "unifact.eligibility": "Academic eligibility",
+  "unifact.period": "Official application period",
+  "unifact.tuition": "Tuition and applicant categories",
+  "unifact.scholarship": "Scholarships and tuition waivers",
+  "unifact.overview": "Program overview",
+  "unifact.structure": "Academic structure",
+  "unifact.specializations": "Specializations",
+  "unifact.documents": "Application documents",
+  "unifact.selection": "Selection procedure",
+  "unifact.languages": "English proficiency requirements",
+  "unifact.tests": "Entrance tests and application routes",
+  "unifact.instructions": "Official application instructions",
+  "unifact.financeLink": "Official fees, exemptions and scholarships",
+  "unifact.curriculumLink": "Official curriculum and study guide",
+  "unifact.information": "University information",
+  "unifact.readFull": "Read the full official source wording",
+  "unifact.bachelorEntry": "Bachelor's-entry pathway",
+  "unifact.master": "Master's degree",
+  "unifact.pending": "Change awaiting review",
+  "unifact.stale": "Source needs rechecking",
+  "unifact.verified": "Checked against the official source",
+  "unifact.unknownPeriod":
+    "The source does not state a verified period for this information. Confirm its applicability before relying on it.",
+  "unifact.reviewNotice":
+    "This is the previously recorded information. A source issue or proposed change needs review.",
+  "unifact.checked": "Last successful source check: {date}",
+  "unifact.sourceChecks": "Source checks and freshness",
+  "unifact.separateChecks":
+    "Studyinfo offering checks and university-page checks run separately. A successful offering check does not verify fees or admissions guidance.",
+  "unifact.neverChecked": "No successful source check is recorded.",
+  "unifact.feeSummary": "Fee recorded; period not confirmed",
+  "unifact.feeDetail":
+    "See the university's applicant categories and source wording below.",
+  "unifact.admissionsSummary": "See university requirements",
+  "unifact.fundingSummary": "Funding information recorded",
+  "unifact.fundingDetail":
+    "Eligibility and conditions apply. Funding is not guaranteed.",
+  "unifact.outside":
+    "This program is outside the curated Finnish catalog. Its existing link and saved record are retained; check its sources for current availability.",
+  "unifact.structureTitle": "Structure and curriculum",
+  "programLinks.applyStudyinfo":
+    "Apply via Studyinfo — official application portal",
   "programLinks.destinations": "Official program destinations",
   "programLinks.apply": "Apply on the official page",
   "programLinks.newTab": "(opens in a new tab)",
@@ -386,9 +433,21 @@ export const en = {
     "A university-owned program page has not been verified yet.",
   "programLinks.noApplication":
     "There is no verified application link for the current cycle. Check the university's admissions instructions for how and when to apply.",
+  "programLinks.reverifying":
+    "The university's program page did not pass our latest check, so it is not shown as verified while we re-check it.",
+  "programLinks.lastKnown":
+    "Last known university page (not currently verified)",
+  "unifact.pathwayCombined":
+    "Bachelor's entry · combined bachelor's + master's pathway",
+  "unifact.pathwayBachelor": "Bachelor's degree",
+  "unifact.studyOption": "Highlighted study track within this degree: {option}",
+  "unifact.audienceNonEu": "Applies to non-EU/EEA applicants",
+  "unifact.yearNotStated": "Academic year not stated by the university",
+  "unifact.yearStated": "Academic year {year}",
   "programLinks.studyinfo":
     "Applications for this program are submitted through Studyinfo, Finland's national application portal.",
-  "pubprog.admissions": "Official admissions information",
+  "pubprog.studyTrack": "Study track",
+  "pubprog.admissions": "Admissions and requirements",
   "pubprog.limitsTitle": "Fees, deadlines and requirements",
   "pubprog.limitsBody":
     "These details are not shown yet while we confirm the reuse terms of the official data. Check the official program page for current information.",
