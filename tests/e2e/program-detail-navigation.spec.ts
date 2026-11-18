@@ -174,6 +174,33 @@ test.describe("program page section navigation", () => {
     await expect(page).toHaveURL(/#deadlines$/);
   });
 
+  test("scrolling by hand right after a click still ends on the section being read", async ({
+    page,
+  }) => {
+    // regression (found on the deployed site): the click lock ignored scroll events, and nothing re-checked once it
+    // expired, so a hand scroll that stopped inside the lock window left the clicked tab highlighted
+    await open(page);
+    const nav = page.getByRole("navigation", { name: "On this page" });
+    await nav.getByRole("link", { name: "Sources" }).click();
+    await page.waitForTimeout(300); // inside the lock window
+    await page.evaluate(() => {
+      const el = document.getElementById("tuition")!;
+      const header = document.querySelector("body header")!;
+      const bar = document.querySelector('nav[aria-label="On this page"]')!;
+      const stuckBottom =
+        header.getBoundingClientRect().bottom -
+        1 +
+        bar.getBoundingClientRect().height;
+      window.scrollTo({
+        top: window.scrollY + el.getBoundingClientRect().top - stuckBottom - 8,
+        behavior: "instant",
+      });
+    });
+    await expect(nav.locator('[aria-current="location"]')).toHaveText(
+      "Tuition",
+    );
+  });
+
   test("works with the keyboard", async ({ page }) => {
     await open(page);
     const nav = page.getByRole("navigation", { name: "On this page" });

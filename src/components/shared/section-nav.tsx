@@ -43,10 +43,18 @@ export function SectionNav({
   useEffect(() => {
     const order = ids ? ids.split("|") : [];
     let frame = 0;
+    let timer = 0;
     const update = () => {
       frame = 0;
       const nav = navRef.current;
-      if (!nav || order.length === 0 || Date.now() < lockUntil.current) return;
+      if (!nav || order.length === 0) return;
+      const locked = lockUntil.current - Date.now();
+      if (locked > 0) {
+        // a click just chose a tab: leave it while the page scrolls there, then look again (no scroll event may follow)
+        window.clearTimeout(timer);
+        timer = window.setTimeout(schedule, locked + 20);
+        return;
+      }
       const line = nav.getBoundingClientRect().bottom + READING_LINE_GAP;
       const atEnd =
         window.innerHeight + window.scrollY >=
@@ -68,6 +76,7 @@ export function SectionNav({
     window.addEventListener("resize", schedule);
     return () => {
       if (frame) cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
       window.removeEventListener("scroll", schedule);
       window.removeEventListener("resize", schedule);
     };
