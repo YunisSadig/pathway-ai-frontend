@@ -109,3 +109,41 @@ describe("university information", () => {
     );
   });
 });
+
+describe("one fact, one source", () => {
+  const credits = (scope: string, value: string): UniversityFact => ({
+    ...fact,
+    field: "credits",
+    scope,
+    value,
+    temporalStatus: "UNKNOWN_YEAR",
+  });
+
+  it("shows the university page's value and not the national record's duplicate", () => {
+    render(
+      <LanguageProvider>
+        <UniversityInformation
+          facts={[
+            credits("", "180+120 ECTS"),
+            credits("studyinfo", "300 ECTS"),
+          ]}
+          fields={["credits"]}
+        />
+      </LanguageProvider>,
+    );
+    expect(screen.getByText("180+120 ECTS")).toBeVisible();
+    expect(screen.queryByText("300 ECTS")).not.toBeInTheDocument();
+  });
+
+  it("uses the national record when the university page does not state the field", () => {
+    render(
+      <LanguageProvider>
+        <UniversityInformation
+          facts={[credits("studyinfo", "180 ECTS")]}
+          fields={["credits"]}
+        />
+      </LanguageProvider>,
+    );
+    expect(screen.getByText("180 ECTS")).toBeVisible();
+  });
+});

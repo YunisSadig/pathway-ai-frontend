@@ -58,12 +58,15 @@ export function PublicProgramDetail({
       })(),
     ],
     [t("pubprog.field"), p.field?.name ?? null],
-    [
-      t("pubprog.studyTrack"),
-      p.studyOption
-        ? t("unifact.studyOption", { option: p.studyOption })
-        : null,
-    ],
+    // a study track is shown only when the source names one: most degrees have none, which is not missing data
+    ...(p.studyOption
+      ? ([
+          [
+            t("pubprog.studyTrack"),
+            t("unifact.studyOption", { option: p.studyOption }),
+          ],
+        ] as [string, string | null][])
+      : []),
     [
       t("pubprog.duration"),
       p.durationMonths ? t("pubprog.months", { n: p.durationMonths }) : null,
