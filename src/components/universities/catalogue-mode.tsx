@@ -1,19 +1,24 @@
 "use client";
 
-import { useSession } from "@/components/account/session-provider";
+import { hadSession, useSession } from "@/components/account/session-provider";
 import { useAccountConfig } from "@/lib/account/use-account-config";
 
 /**
  * Which experience this visitor gets: "public" (identity and official links, no account needed) or "full" (the protected program
- * catalogue). Visitors and accounts without catalogue access get the public one. When the account service cannot be read (a sleeping
- * backend, a test without it) the full experience is tried: it answers 401/403 by itself if the person may not see it.
+ * catalogue). Public content never waits for the session: while "who am I?" is still on its way, or the account service cannot be
+ * reached (a backend that is waking up), the public catalogue is shown at once. It switches to the full catalogue only when the
+ * session confirms an account with catalogue access (or the catalogue is open to everyone). The server enforces access on every
+ * request either way; this only chooses what to ask for.
  */
-export function useCatalogueMode(): "loading" | "public" | "full" {
+export function useCatalogueMode(): "public" | "full" {
   const { state } = useSession();
   const { config } = useAccountConfig();
   if (config?.cataloguePublic) return "full";
-  if (state.status === "loading") return "loading";
-  if (state.status === "authenticated")
-    return state.user.catalogueAccess ? "full" : "public";
-  return state.serviceError ? "full" : "public";
+  if (state.status === "authenticated" && state.user.catalogueAccess)
+    return "full";
+  // the account service is waking up and this browser was signed in last time: keep asking for the full catalogue (the server
+  // answers 401/403 by itself if the session is gone); a first-time visitor gets the public catalogue instead of an error
+  if (state.status === "anonymous" && state.serviceError && hadSession())
+    return "full";
+  return "public";
 }

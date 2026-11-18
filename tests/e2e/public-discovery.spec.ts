@@ -440,3 +440,73 @@ test.describe("an account with an unconfirmed email is not held back", () => {
     await expect(page.getByText("only to invited accounts")).toHaveCount(0);
   });
 });
+
+test.describe("public pages never wait for the session", () => {
+  const slowMe = (page: Page, ms: number, status: number | "abort") =>
+    page.route(`${API}/api/v1/account/me`, async (route) => {
+      await new Promise((r) => setTimeout(r, ms));
+      if (status === "abort") return route.abort("connectionrefused");
+      return route.fulfill({
+        status,
+        contentType: "application/json",
+        headers: { "access-control-allow-origin": "*" },
+        body: JSON.stringify({ status, code: "UNAUTHENTICATED" }),
+      });
+    });
+
+  test("a visitor sees the public catalogue and Log in while a slow session check is still running", async ({
+    page,
+  }) => {
+    await mockAccountApi(page);
+    await mockPublic(page);
+    await slowMe(page, 15_000, 401);
+    const started = Date.now();
+    await page.goto("/universities");
+    await expect(page.getByRole("article").first()).toBeVisible({
+      timeout: 5000,
+    });
+    await expect(
+      page.getByRole("link", { name: "Sign up" }).first(),
+    ).toBeVisible({ timeout: 1000 });
+    expect(Date.now() - started).toBeLessThan(8000);
+  });
+
+  test("a browser that was signed in sees 'restoring', never 'Log in', while the account service is unreachable", async ({
+    page,
+  }) => {
+    await page.addInitScript(() =>
+      window.localStorage.setItem("pathway-had-session", "1"),
+    );
+    await mockAccountApi(page);
+    await mockPublic(page);
+    await slowMe(page, 0, "abort");
+    await page.goto("/");
+    await expect(
+      page.getByText("Restoring your account…").first(),
+    ).toBeVisible();
+    await expect(page.getByRole("link", { name: "Log in" })).toHaveCount(0);
+  });
+
+  test("a confirmed 'no session' answer clears the hint and shows Log in", async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      if (!sessionStorage.getItem("seeded")) {
+        window.localStorage.setItem("pathway-had-session", "1");
+        sessionStorage.setItem("seeded", "1");
+      }
+    });
+    await mockAccountApi(page);
+    await mockPublic(page);
+    await slowMe(page, 0, 401);
+    await page.goto("/");
+    await expect(
+      page.getByRole("link", { name: "Sign up" }).first(),
+    ).toBeVisible();
+    expect(
+      await page.evaluate(() =>
+        window.localStorage.getItem("pathway-had-session"),
+      ),
+    ).toBeNull();
+  });
+});

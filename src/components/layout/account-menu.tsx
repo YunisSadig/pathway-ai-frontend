@@ -11,10 +11,13 @@ import {
   UserRound,
 } from "lucide-react";
 import { DropdownMenu } from "radix-ui";
-import { useSession } from "@/components/account/session-provider";
+import { useSyncExternalStore } from "react";
+import { hadSession, useSession } from "@/components/account/session-provider";
 import { Avatar } from "@/components/profile/avatar-uploader";
 import { Button } from "@/components/ui/button";
 import { useT, type Key } from "@/lib/i18n";
+
+const noSubscription = () => () => {};
 
 export const ACCOUNT_LINKS = [
   { href: "/dashboard", label: "nav.dashboard" as Key, Icon: LayoutDashboard },
@@ -32,17 +35,46 @@ export function AuthActions() {
   const { t } = useT();
   const { state, logout } = useSession();
   const router = useRouter();
+  const hint = useSyncExternalStore(
+    noSubscription,
+    () => (hadSession() ? "had-session" : "none"),
+    () => "ssr" as const,
+  );
 
-  if (state.status === "loading") {
+  // Before the session answer arrives (or while the API is waking up): a browser that was signed in last time sees a neutral
+  // "restoring" control, every other visitor sees Log in / Sign up at once. Only the server's answer changes the real state.
+  const pending =
+    state.status === "loading" ||
+    (state.status === "anonymous" && state.serviceError);
+  if (pending && hint === "ssr") {
     return (
       <div
         aria-hidden
-        className="h-9 w-12 animate-pulse rounded-lg bg-muted min-[400px]:w-24 sm:w-40"
+        className="h-9 w-12 rounded-lg bg-muted min-[400px]:w-24 sm:w-40"
       />
     );
   }
+  if (pending && hint === "had-session") {
+    return (
+      <span
+        role="status"
+        className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-surface px-3 text-sm text-muted-foreground"
+      >
+        <span
+          aria-hidden
+          className="size-2 animate-pulse rounded-full bg-primary"
+        />
+        <span className="hidden min-[400px]:inline">
+          {t("nav.restoringAccount")}
+        </span>
+        <span className="sr-only min-[400px]:hidden">
+          {t("nav.restoringAccount")}
+        </span>
+      </span>
+    );
+  }
 
-  if (state.status === "anonymous") {
+  if (state.status !== "authenticated") {
     return (
       <div className="flex items-center gap-2">
         <Button
@@ -63,10 +95,9 @@ export function AuthActions() {
   const { user } = state;
   return (
     <DropdownMenu.Root>
-      <DropdownMenu.Trigger
-        aria-label={t("nav.accountMenu")}
-        className="inline-flex h-11 items-center gap-2 rounded-lg border border-border bg-surface pr-1.5 pl-1.5 transition-colors duration-150 hover:bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:pr-2"
-      >
+      {/* the accessible name comes from the button's own text (the visible name, then a hidden "Account menu"), so what is
+          read out always contains what is shown (WCAG 2.5.3 label in name) */}
+      <DropdownMenu.Trigger className="inline-flex h-11 items-center gap-2 rounded-lg border border-border bg-surface pr-1.5 pl-1.5 transition-colors duration-150 hover:bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:pr-2">
         {user.avatar?.present ? (
           <Avatar
             present
@@ -84,6 +115,10 @@ export function AuthActions() {
         )}
         <span className="hidden max-w-32 truncate text-sm font-semibold sm:block">
           {user.displayName || user.email.split("@")[0]}
+        </span>
+        <span className="sr-only">
+          <span className="hidden sm:inline">, </span>
+          {t("nav.accountMenu")}
         </span>
         <ChevronDown
           aria-hidden

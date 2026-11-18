@@ -8,7 +8,13 @@ import {
   PROGRAMS,
   programDetail,
   programPage,
+  signedInWithCatalogueAccess,
 } from "./helpers/api";
+
+// the protected catalogue is what these tests exercise: it is shown to a signed-in account with catalogue access
+test.beforeEach(async ({ page }) => {
+  await signedInWithCatalogueAccess(page);
+});
 
 /** On narrow screens the filter fields sit behind a "Filters" button; opens it when it is shown and collapsed. */
 async function openFilters(page: import("@playwright/test").Page) {

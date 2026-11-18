@@ -100,6 +100,7 @@ export const en = {
   "nav.profile": "Profile",
   "nav.saved": "Saved",
   "nav.settings": "Settings",
+  "nav.restoringAccount": "Restoring your account…",
   "nav.accountMenu": "Account menu",
   "nav.yourAccount": "Your account",
   "nav.logout": "Log out",

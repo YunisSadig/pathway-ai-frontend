@@ -1,5 +1,10 @@
 import { expect, test } from "@playwright/test";
-import { mockUniversities } from "./helpers/api";
+import { mockUniversities, signedInWithCatalogueAccess } from "./helpers/api";
+
+// the protected catalogue is what these tests exercise: it is shown to a signed-in account with catalogue access
+test.beforeEach(async ({ page }) => {
+  await signedInWithCatalogueAccess(page);
+});
 
 test("universities starts with all regions and lists programs first", async ({
   page,
