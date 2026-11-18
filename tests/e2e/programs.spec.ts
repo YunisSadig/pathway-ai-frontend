@@ -316,6 +316,11 @@ test.describe("program details", () => {
       name: "Deadlines & intakes",
     });
     await expect(deadlines).toContainText("15 Jan 2099");
+    // a passed deadline is folded away while a current one is shown, and is labelled once opened
+    await expect(
+      deadlines.getByText("This deadline has passed"),
+    ).not.toBeVisible();
+    await deadlines.getByText(/Passed deadlines/).click();
     await expect(deadlines).toContainText("This deadline has passed");
 
     // program 01 has no recorded requirements: the page says so instead of staying silent
@@ -413,7 +418,7 @@ test.describe("program details", () => {
     const nav = page.getByRole("navigation", { name: "On this page" });
     await expect(nav.getByRole("link")).toHaveText([
       "Overview",
-      "Tuition & funding",
+      "Tuition",
       "Admissions",
       "Deadlines",
       "Sources",

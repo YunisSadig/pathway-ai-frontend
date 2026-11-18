@@ -12,8 +12,9 @@ import type { SourceRef } from "@/types/program";
 
 /**
  * An editorial section: the title and intro sit in a narrow left column on wide screens and the content
- * on the right, divided from the previous section by a single rule. `scroll-mt` keeps the heading clear of
- * the sticky header (4rem) and section navigation when reached through an anchor.
+ * on the right, divided from the previous section by a single rule. `scroll-mt-32` (8rem) keeps the heading clear
+ * of the sticky header (4rem + 1px border) and the section navigation (about 3.25rem) when reached through an
+ * anchor; if either bar grows, change it together with them.
  */
 export function DetailSection({
   id,
@@ -30,9 +31,9 @@ export function DetailSection({
     <section
       id={id}
       aria-labelledby={`${id}-title`}
-      className="scroll-mt-32 border-t border-border py-8 first:border-t-0 sm:py-10 lg:grid lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-10"
+      className="scroll-mt-32 border-t border-border py-6 first:border-t-0 sm:py-8 lg:grid lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-10"
     >
-      <div className="mb-5 lg:mb-0">
+      <div className="mb-4 lg:mb-0">
         <h2 id={`${id}-title`} className="text-xl font-bold">
           {title}
         </h2>
@@ -44,6 +45,33 @@ export function DetailSection({
       </div>
       <div className="min-w-0">{children}</div>
     </section>
+  );
+}
+
+/**
+ * Secondary, historical items (outdated fees, passed deadlines, ended requirements) folded behind one disclosure.
+ * Use it only when something current is shown next to it: with nothing current, the historical items are the
+ * content and stay visible. Everything inside keeps its own warnings and sources.
+ */
+export function PastPeriods({
+  label,
+  count,
+  children,
+}: {
+  label: string;
+  count: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <details className="group border-t border-border pt-3 text-sm">
+      <summary className="inline-flex min-h-11 cursor-pointer list-none items-center gap-1.5 font-semibold text-muted-foreground underline decoration-dotted underline-offset-4 hover:text-foreground [&::-webkit-details-marker]:hidden">
+        {label} ({count})
+        <span aria-hidden className="transition group-open:rotate-90">
+          ›
+        </span>
+      </summary>
+      <div className="mt-2">{children}</div>
+    </details>
   );
 }
 
