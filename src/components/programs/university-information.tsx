@@ -48,7 +48,16 @@ export function UniversityInformation({
   fields: string[];
 }) {
   const { t, lang } = useT();
-  const shown = facts.filter((f) => fields.includes(f.field));
+  // The university's own page leads; the official national record (scope "studyinfo") fills a field only when the
+  // page does not state it, so one fact is never shown twice from two sources.
+  const fromPage = new Set(
+    facts.filter((f) => f.scope !== "studyinfo").map((f) => f.field),
+  );
+  const shown = facts.filter(
+    (f) =>
+      fields.includes(f.field) &&
+      (f.scope !== "studyinfo" || !fromPage.has(f.field)),
+  );
   if (!shown.length) return null;
   return (
     <dl className="grid gap-5">
