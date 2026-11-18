@@ -60,7 +60,8 @@ export function UniversityInformation({
   );
   if (!shown.length) return null;
   return (
-    <dl className="divide-y divide-border">
+    // when it follows other content in a section (requirements, fees), it gets its own rule and spacing
+    <dl className="divide-y divide-border not-first:mt-6 not-first:border-t not-first:border-border not-first:pt-5">
       {shown.map((fact) => (
         <div
           key={`${fact.field}-${fact.scope}-${fact.source.url}`}
