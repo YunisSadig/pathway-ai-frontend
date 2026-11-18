@@ -245,7 +245,7 @@ function ProgramDetailContent({ p }: { p: ProgramDetail }) {
   );
   const nav = [
     { id: "overview", label: "Overview" },
-    { id: "tuition", label: "Tuition & funding" },
+    { id: "tuition", label: "Tuition" },
     { id: "admissions", label: "Admissions" },
     ...(p.intakes.length ? [{ id: "deadlines", label: "Deadlines" }] : []),
     ...(has("structure", "curriculum_url")
@@ -260,7 +260,7 @@ function ProgramDetailContent({ p }: { p: ProgramDetail }) {
   return (
     <article>
       <header className="border-b border-border bg-linear-to-b from-primary-soft to-background">
-        <div className="page-container pt-6 pb-8 sm:pt-8 sm:pb-10">
+        <div className="page-container pt-5 pb-6 sm:pt-6 sm:pb-8">
           <nav
             aria-label="Breadcrumb"
             className="text-sm text-muted-foreground"
@@ -306,18 +306,18 @@ function ProgramDetailContent({ p }: { p: ProgramDetail }) {
                   })}
                 </p>
               ) : null}
-              <div className="mt-4">
+              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+                <p className="text-lg">
+                  <Link
+                    href={`/universities/${university.slug}`}
+                    className="font-semibold underline-offset-4 hover:underline"
+                  >
+                    {university.name}
+                  </Link>
+                </p>
                 <SaveButton kind="program" id={p.identifier} />
               </div>
-              <p className="mt-2 text-lg">
-                <Link
-                  href={`/universities/${university.slug}`}
-                  className="font-semibold underline-offset-4 hover:underline"
-                >
-                  {university.name}
-                </Link>
-              </p>
-              <ul className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-muted-foreground">
+              <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-muted-foreground">
                 <li className="flex items-center gap-1.5">
                   <MapPin aria-hidden className="size-4" />
                   {place}
@@ -338,7 +338,7 @@ function ProgramDetailContent({ p }: { p: ProgramDetail }) {
               </ul>
               <p
                 className={cn(
-                  "mt-4 flex items-center gap-1.5 text-sm font-semibold",
+                  "mt-3 flex items-center gap-1.5 text-sm font-semibold",
                   verified ? "text-success" : "text-warning",
                 )}
               >
@@ -434,9 +434,9 @@ function ProgramDetailContent({ p }: { p: ProgramDetail }) {
         </dl>
       </div>
 
-      <div className="mt-6">
-        <SectionNav items={nav} />
-      </div>
+      {/* A direct child of <article> (as tall as the whole page) so it can stay stuck under the header while every
+          section scrolls by. Inside a short wrapper a sticky element has nowhere to travel. */}
+      <SectionNav items={nav} className="mt-6" />
 
       <div className="page-container pb-12">
         {p.catalogMembership === "OUTSIDE_CURATED_CATALOG" ? (

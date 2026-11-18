@@ -60,36 +60,16 @@ export function UniversityInformation({
   );
   if (!shown.length) return null;
   return (
-    <dl className="grid gap-5">
+    <dl className="divide-y divide-border">
       {shown.map((fact) => (
         <div
           key={`${fact.field}-${fact.scope}-${fact.source.url}`}
-          className="grid gap-2 border-b border-border pb-5 last:border-0"
+          className="grid gap-1 py-4 first:pt-0 last:pb-0 sm:grid-cols-[11rem_minmax(0,1fr)] sm:gap-4"
         >
           <dt className="font-semibold">
             {t(LABELS[fact.field] ?? "unifact.information")}
           </dt>
-          <dd className="grid gap-2 text-sm">
-            <div className="flex flex-wrap items-center gap-2">
-              <span
-                className={
-                  fact.verificationStatus === "VERIFIED"
-                    ? "text-success"
-                    : "text-warning"
-                }
-              >
-                {t(
-                  fact.verificationStatus === "PENDING_REVIEW"
-                    ? "unifact.pending"
-                    : fact.verificationStatus === "STALE"
-                      ? "unifact.stale"
-                      : "unifact.verified",
-                )}
-              </span>
-              {DATED.has(fact.field) ? (
-                <TemporalBadge status={fact.temporalStatus} />
-              ) : null}
-            </div>
+          <dd className="grid min-w-0 gap-1.5 text-sm">
             {/^https:\/\//.test(fact.value) ? (
               <ExternalLink href={fact.value}>
                 {t(LABELS[fact.field] ?? "unifact.information")}
@@ -130,11 +110,31 @@ export function UniversityInformation({
                 {t("unifact.reviewNotice")}
               </p>
             ) : null}
-            <p className="text-muted-foreground">
-              {t("unifact.checked", {
-                date: dateLabel(fact.lastSuccessfulCheck.slice(0, 10), lang),
-              })}
-            </p>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-muted-foreground">
+              <span
+                className={
+                  fact.verificationStatus === "VERIFIED"
+                    ? "font-medium text-success"
+                    : "font-medium text-warning"
+                }
+              >
+                {t(
+                  fact.verificationStatus === "PENDING_REVIEW"
+                    ? "unifact.pending"
+                    : fact.verificationStatus === "STALE"
+                      ? "unifact.stale"
+                      : "unifact.verified",
+                )}
+              </span>
+              {DATED.has(fact.field) ? (
+                <TemporalBadge status={fact.temporalStatus} />
+              ) : null}
+              <span>
+                {t("unifact.checked", {
+                  date: dateLabel(fact.lastSuccessfulCheck.slice(0, 10), lang),
+                })}
+              </span>
+            </div>
             <Evidence source={fact.source} />
           </dd>
         </div>
