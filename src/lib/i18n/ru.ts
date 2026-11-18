@@ -102,6 +102,7 @@ export const ru: Record<Key, string> = {
   "nav.profile": "Профиль",
   "nav.saved": "Сохранённое",
   "nav.settings": "Настройки",
+  "nav.restoringAccount": "Восстанавливаем ваш аккаунт…",
   "nav.accountMenu": "Меню аккаунта",
   "nav.yourAccount": "Ваш аккаунт",
   "nav.logout": "Выйти",

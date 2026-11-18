@@ -357,3 +357,36 @@ export async function mockUniversityDetail(page: Page) {
     });
   });
 }
+
+/**
+ * The protected catalogue is shown to a signed-in account with catalogue access (visitors get the public tier at once).
+ * Specs that exercise the protected catalogue declare that account explicitly instead of relying on an unavailable
+ * account service.
+ */
+export async function signedInWithCatalogueAccess(page: Page) {
+  await page.route(
+    new RegExp(`^${API}/api/v1/account/(me|config)$`),
+    (route) => {
+      const path = new URL(route.request().url()).pathname;
+      return path.endsWith("/me")
+        ? json(route, {
+            id: 1,
+            email: "synthetic.reader@example.test",
+            displayName: "Synthetic Reader",
+            role: "USER",
+            emailVerified: true,
+            catalogueAccess: true,
+            createdAt: "2000-01-01T00:00:00Z",
+            hasPassword: true,
+            providers: [],
+            avatar: { present: false, version: 0 },
+          })
+        : json(route, {
+            registrationOpen: true,
+            emailDeliveryAvailable: false,
+            cataloguePublic: false,
+            googleLoginAvailable: false,
+          });
+    },
+  );
+}

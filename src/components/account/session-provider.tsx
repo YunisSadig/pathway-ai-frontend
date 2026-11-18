@@ -34,6 +34,28 @@ interface SessionContextValue {
 
 const SessionContext = createContext<SessionContextValue | null>(null);
 
+/**
+ * A display hint only: "this browser had a signed-in session last time". It holds no token, cookie or personal data (just "1"), so it
+ * cannot sign anyone in; the HttpOnly session cookie and the server still decide everything. It lets the header show "restoring your
+ * account" instead of "Log in" while a slow backend answers, and is removed when the server confirms there is no session or on log out.
+ */
+const SESSION_HINT = "pathway-had-session";
+export function hadSession(): boolean {
+  try {
+    return window.localStorage.getItem(SESSION_HINT) === "1";
+  } catch {
+    return false;
+  }
+}
+function rememberSession(present: boolean) {
+  try {
+    if (present) window.localStorage.setItem(SESSION_HINT, "1");
+    else window.localStorage.removeItem(SESSION_HINT);
+  } catch {
+    // private mode or blocked storage: the hint is optional
+  }
+}
+
 /** Pauses between background re-reads while the API cannot be reached (about 2.5 minutes in total: a cold start takes up to two). */
 export const RETRY_DELAYS_MS = [3000, 8000, 20000, 45000, 75000];
 
@@ -43,6 +65,13 @@ export const RETRY_DELAYS_MS = [3000, 8000, 20000, 45000, 75000];
  */
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<SessionState>({ status: "loading" });
+
+  // keep the display hint in step with what the server confirmed (never on a service error: that proves nothing)
+  useEffect(() => {
+    if (state.status === "authenticated") rememberSession(true);
+    else if (state.status === "anonymous" && !state.serviceError)
+      rememberSession(false);
+  }, [state]);
 
   // Every change of who is signed in takes a new number; an answer that arrives for an older number is ignored, so a slow
   // "who am I?" can never undo a login, resurrect a session after log out, or overwrite a newer answer.

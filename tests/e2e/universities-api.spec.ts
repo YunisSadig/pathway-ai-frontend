@@ -7,7 +7,13 @@ import {
   json,
   mockUniversities,
   universityPage,
+  signedInWithCatalogueAccess,
 } from "./helpers/api";
+
+// the protected catalogue is what these tests exercise: it is shown to a signed-in account with catalogue access
+test.beforeEach(async ({ page }) => {
+  await signedInWithCatalogueAccess(page);
+});
 
 // Next.js adds its own role=alert route announcer, so scope to the results region.
 const inResults = (page: Page) => page.getByRole("region", { name: "Results" });
@@ -227,6 +233,7 @@ for (const scheme of ["light", "dark"] as const) {
     ];
     for (const c of cases) {
       await page.unrouteAll();
+      await signedInWithCatalogueAccess(page);
       await mockUniversities(page, (route) =>
         c.abort ? route.abort("connectionrefused") : json(route, none),
       );

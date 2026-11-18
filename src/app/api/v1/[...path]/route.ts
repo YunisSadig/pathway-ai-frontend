@@ -13,8 +13,12 @@
  *   SameSite=Lax cookie); the `Origin` header is checked here and not forwarded.
  * - The catalogue (programs, universities, discovery) is not even requested from the backend without a session cookie: the backend
  *   enforces who may see it, this is a second lock.
- * - Account answers are `no-store`; other answers keep the backend's ETag and max-age but `public` becomes `private`, so no shared
- *   cache (CDN) can ever store data that was fetched with the key.
+ * - Account answers are `no-store`; catalogue answers keep the backend's ETag and max-age but `public` becomes `private`, so no
+ *   shared cache (CDN) can ever store protected data that was fetched with the key.
+ * - The one exception is the "public" tier: the allow-listed fields anyone may read without an account. It is requested WITHOUT the
+ *   session cookie (so it cannot depend on who asks) and a successful answer may be kept by the CDN and served while it revalidates
+ *   (PUBLIC_CACHE). A visitor then sees the public catalogue at once even while a sleeping backend wakes up; it is at most a few
+ *   minutes behind the backend, and every fact still carries its own check date.
  */
 export const maxDuration = 150;
 
@@ -22,6 +26,9 @@ const CATALOGUE_AREAS = new Set(["programs", "universities", "discovery"]);
 // "public" is the allow-listed identity data of the universities: readable without a session (the backend decides the fields)
 const READ_ONLY_AREAS = new Set([...CATALOGUE_AREAS, "public"]);
 const SESSION_COOKIE = "PATHWAY_SESSION";
+// public tier only: browsers 60 s, the CDN 5 min, then served stale for up to a day while one background request refreshes it
+const PUBLIC_CACHE =
+  "public, max-age=60, s-maxage=300, stale-while-revalidate=86400";
 // A sleeping free-tier backend needed 84.6 s for its first answer (measured 2026-11-15), so wait well beyond that. The function itself may
 // run longer than the upstream wait (Fluid Compute on the Hobby plan allows it), otherwise the platform would cut the request first.
 const UPSTREAM_TIMEOUT_MS = 130_000;
@@ -151,7 +158,8 @@ async function forward(request: Request, { params }: Ctx): Promise<Response> {
       .trim();
   else if (body !== undefined && body.length > 0)
     headers["Content-Type"] = "application/json";
-  if (cookie) headers.Cookie = cookie;
+  // the public tier never depends on who is asking, so it never receives the session (and may therefore be shared, below)
+  if (cookie && area !== "public") headers.Cookie = cookie;
   const key = process.env.API_STAGING_KEY;
   if (key) headers["X-Staging-Key"] = key;
   const visitor = clientAddress(request);
@@ -202,9 +210,14 @@ async function forward(request: Request, { params }: Ctx): Promise<Response> {
         new URL(request.url).searchParams.has("v")
         ? "private, max-age=86400" // a picture URL carries its version, so a changed picture is a new URL
         : "no-store"
-      : cacheControl
-        ? cacheControl.replace(/\bpublic\b/i, "private")
-        : "no-store",
+      : area === "public" &&
+          request.method === "GET" &&
+          upstream.status === 200 &&
+          upstream.headers.getSetCookie().length === 0
+        ? PUBLIC_CACHE
+        : cacheControl
+          ? cacheControl.replace(/\bpublic\b/i, "private")
+          : "no-store",
   );
   // the session cookie (set at login, cleared at logout) travels back unchanged: HttpOnly, SameSite=Lax, host-only on this site
   for (const setCookie of upstream.headers.getSetCookie()) {

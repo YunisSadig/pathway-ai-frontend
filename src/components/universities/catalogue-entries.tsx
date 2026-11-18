@@ -3,7 +3,6 @@
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { Alert } from "@/components/ui/alert";
-import { LoadingState } from "@/components/shared/loading-state";
 import { DiscoveryExplorer } from "@/components/universities/discovery-explorer";
 import { PublicUniversityDetail } from "@/components/universities/public-university-detail";
 import { UniversityDetailView } from "@/components/universities/university-detail-view";
@@ -33,9 +32,17 @@ export function UniversitiesEntry() {
       <WelcomeNote />
     </Suspense>
   );
-  if (mode === "loading") return <LoadingState label={t("pub.loading")} />;
   return (
     <CatalogueScopeProvider value={mode === "public" ? "public" : "full"}>
+      {note}
+      {/* outside the Suspense boundary: it does not depend on the URL, so it is rendered once and at once */}
+      {mode === "public" ? (
+        <div className="page-container pt-6">
+          <Alert kind="info" title={t("pub.coverageTitle")}>
+            {t("pub.coverageBody")}
+          </Alert>
+        </div>
+      ) : null}
       <Suspense
         fallback={
           <p className="min-h-[75vh] text-muted-foreground">
@@ -43,14 +50,6 @@ export function UniversitiesEntry() {
           </p>
         }
       >
-        {note}
-        {mode === "public" ? (
-          <div className="page-container pt-6">
-            <Alert kind="info" title={t("pub.coverageTitle")}>
-              {t("pub.coverageBody")}
-            </Alert>
-          </div>
-        ) : null}
         <DiscoveryExplorer />
       </Suspense>
     </CatalogueScopeProvider>
@@ -59,14 +58,7 @@ export function UniversitiesEntry() {
 
 /** /universities/[slug]: the public page for visitors, the detailed protected page for accounts with access. */
 export function UniversityDetailEntry() {
-  const { t } = useT();
   const mode = useCatalogueMode();
-  if (mode === "loading")
-    return (
-      <div className="page-container section-y">
-        <LoadingState label={t("pub.loading")} />
-      </div>
-    );
   return mode === "public" ? (
     <PublicUniversityDetail />
   ) : (
