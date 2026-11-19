@@ -198,27 +198,27 @@ export function ProfileWizard() {
                     i !== current &&
                     void d.flush().then(() => goTo(i))
                   }
-                  className="group grid w-full gap-1.5 text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary disabled:cursor-not-allowed"
+                  className="group grid min-h-11 w-full content-center gap-1.5 text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary disabled:cursor-not-allowed"
                 >
                   <span
                     aria-hidden
                     className={`h-1.5 rounded-full transition-colors ${i === current ? "bg-primary" : done ? "bg-primary/60" : "bg-border-strong"}`}
                   />
-                  <span className="hidden min-w-0 items-center gap-1.5 overflow-hidden text-xs font-semibold sm:flex">
+                  <span className="hidden min-w-0 items-center gap-1.5 overflow-hidden text-sm font-semibold sm:flex">
                     <span
                       aria-hidden
-                      className={`grid size-5 shrink-0 place-items-center rounded-full text-[11px] ${i === current ? "bg-primary text-primary-foreground" : done ? "bg-primary-soft text-primary-soft-foreground" : "bg-muted text-muted-foreground"}`}
+                      className={`grid size-6 shrink-0 place-items-center rounded-full text-sm ${i === current ? "bg-primary text-primary-foreground" : done ? "bg-primary-soft text-primary-soft-foreground" : "bg-muted text-muted-foreground"}`}
                     >
                       {done ? <Check className="size-3" /> : i + 1}
                     </span>
                     <span
                       title={t(`step.${s}`)}
-                      className={`min-w-0 truncate ${i === current ? "text-foreground" : "text-muted-foreground"}`}
+                      className={`hidden min-w-0 truncate lg:inline ${i === current ? "text-foreground" : "text-muted-foreground"}`}
                     >
                       {t(`step.${s}`)}
                     </span>
                   </span>
-                  <span className="sr-only sm:hidden">
+                  <span className="sr-only lg:hidden">
                     {t("wizard.stepOf", { n: i + 1, total: STEPS.length })}:{" "}
                     {t(`step.${s}`)}
                   </span>
