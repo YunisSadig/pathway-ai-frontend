@@ -120,6 +120,18 @@ async function expectClean(page: Page, path: string, width: number) {
   await page.setViewportSize({ width, height: 800 });
   await page.goto(path);
   await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
+  // measure the settled page: no loading region left and no finite transition still running (axe
+  // color-contrast on /universities once failed intermittently on CI when it ran right after the heading appeared)
+  await expect(page.locator("[aria-busy=true]")).toHaveCount(0);
+  await page.waitForFunction(() =>
+    document
+      .getAnimations()
+      .every(
+        (a) =>
+          a.playState !== "running" ||
+          a.effect?.getTiming().iterations === Infinity,
+      ),
+  );
   const p = await layoutProblems(page);
   const where = `${path} @ ${width}px`;
   expect(p.overflow, `${where}: horizontal overflow`).toBeLessThanOrEqual(0);
