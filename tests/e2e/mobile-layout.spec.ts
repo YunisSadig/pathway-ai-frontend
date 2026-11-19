@@ -127,8 +127,19 @@ async function expectClean(page: Page, path: string, width: number) {
   expect(p.smallText, `${where}: text under 14px`).toEqual([]);
   if (width === 320) {
     const axe = await new AxeBuilder({ page }).analyze();
+    // report each failing node with its colours, not just the rule id
     expect(
-      axe.violations.map((v) => v.id),
+      axe.violations.flatMap((v) =>
+        v.nodes.map((n) => {
+          const d = n.any[0]?.data as
+            | { fgColor?: string; bgColor?: string; contrastRatio?: number }
+            | undefined;
+          const colours = d?.contrastRatio
+            ? ` fg ${d.fgColor} bg ${d.bgColor} ratio ${d.contrastRatio}`
+            : "";
+          return `${v.id} ${n.target.join(" ")}${colours} ${n.html.slice(0, 160)}`;
+        }),
+      ),
       `${where}: axe`,
     ).toEqual([]);
   }
