@@ -2,7 +2,10 @@
 
 **Live website: https://pathway-ai-frontend-roan.vercel.app**
 
-Pathway AI helps international students (from Azerbaijan, Kazakhstan, Georgia, Uzbekistan and Kyrgyzstan) plan studies abroad using **official, sourced information**. It never invents admission chances and never converts grades. Early release.
+Pathway AI is a global study-abroad platform that helps international students plan their studies using **official, sourced information**. It never invents admission chances and never converts grades. Early release.
+
+- **Who can register:** for now, students from Azerbaijan, Kazakhstan, Georgia, Uzbekistan and Kyrgyzstan. More countries will follow.
+- **Where students can study:** the catalogue is built to cover universities worldwide (the EU, the USA, Canada, Japan and more). Today it holds verified programs from Finland; Poland is next. A country is listed only once its data has been imported and verified.
 
 - Backend repository: https://github.com/YunisSadig/pathway-ai-backend (hosted on Render; database on Neon)
 - Status of the data: the real university catalogue is a **protected beta** (reuse terms of the official data are being confirmed), so it is open only to invited accounts.
