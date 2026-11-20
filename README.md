@@ -5,7 +5,7 @@
 Pathway AI is a global study-abroad platform that helps international students plan their studies using **official, sourced information**. It never invents admission chances and never converts grades. Early release.
 
 - **Who can register:** for now, students from Azerbaijan, Kazakhstan, Georgia, Uzbekistan and Kyrgyzstan. More countries will follow.
-- **Where students can study:** the catalogue is built to cover universities worldwide (the EU, the USA, Canada, Japan and more). Today it holds verified programs from Finland; Poland is next. A country is listed only once its data has been imported and verified.
+- **Where students can study:** the catalogue is built to cover universities worldwide (the EU, the USA, Canada, Japan and more). Today it holds programs from Finland (7 universities, 72 programs) and Poland (8 universities, 14 programs imported on 2026-11-20 from POL-on; no tuition or deadlines yet). A country is listed only once its data has been imported and verified.
 
 - Backend repository: https://github.com/YunisSadig/pathway-ai-backend (hosted on Render; database on Neon)
 - Status of the data: the real university catalogue is a **protected beta** (reuse terms of the official data are being confirmed), so it is open only to invited accounts.
@@ -49,7 +49,7 @@ Create `.env.local` from `.env.example`. For a local backend set `NEXT_PUBLIC_AP
 
 ## Deployment
 
-Pull requests run CI (format, lint, types, unit, build, e2e). Merging to `main` deploys to Vercel through its Git integration; the workflow `verify-deployment` then waits for the merged commit (`/api/version`) and runs the deployment check and the live smoke test. Details: `docs/deployment.md`. The free backend sleeps when idle and can need up to about two minutes to wake: the interface shows progress and waits up to 140 s.
+Pull requests run CI (format, lint, types, unit, build, e2e). Merging to `main` deploys to Vercel through its Git integration; the workflow `verify-deployment` then waits for the merged commit (`/api/version`) and runs the deployment check and the live smoke test. Details: `docs/deployment.md`. The free backend sleeps when idle and can need up to about two minutes to wake: the interface shows progress and waits up to 140 s. An UptimeRobot check pings the backend's `/actuator/info` every 5 minutes.
 
 ## Principles
 

@@ -1,11 +1,11 @@
 # Deployment
 
-**Status: nothing is deployed.** The frontend is ready to deploy, but a hosting account login, a decision about
-commercial use, and a deployed backend are needed first. This page records what was verified (on 2026-11-11, from the
-providers' official documentation) and exactly what to do.
+**Status (2026-11-20): deployed.** The frontend runs on Vercel and the backend on Render, with the database on Neon. Sections 1-8
+below record what was verified on 2026-11-11 (from the providers' official documentation), before the first deployment, and what the
+owner had to do; the current mode and pipeline are in "Public site with student accounts (current mode)" and "Delivery pipeline (current)".
 
 CI and deployment are different things. **CI** (`.github/workflows/ci.yml`) runs checks on every push and pull request.
-**Deployment** (`.github/workflows/deploy.yml`) publishes a build; it is switched off until you enable it.
+**Deployment** is done by Vercel's Git integration (the former `deploy.yml` was removed; see "Delivery pipeline (current)").
 
 ## 1. Which free plan can host this?
 
@@ -112,7 +112,7 @@ from the first 100 programs.
 ## 8. Findings
 
 - The frontend builds with the API origin supplied as an environment variable; no code change is needed to deploy.
-- No full-stack production integration exists: **the backend is not deployed**, so a deployed frontend cannot show data yet.
+- On 2026-11-11 no full-stack production integration existed (the backend was not deployed yet); as of 2026-11-20 the backend runs on Render and the site shows its data.
 - Hosting cost today: **$0**, provided Vercel Hobby's non-commercial condition is true. Nothing paid was created.
 
 ## Public site with student accounts (current mode)
