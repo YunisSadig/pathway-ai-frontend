@@ -31,7 +31,7 @@ export const en = {
   "hiw.5.body": "Create a primary study plan and a backup plan.",
   "pub.coverageTitle": "What is covered today",
   "pub.coverageBody":
-    "The catalogue is being expanded and covers only the institutions Pathway AI actually tracks, today in Finland. A university here is not a complete picture of what it teaches: only the programs we keep current are counted.",
+    "The catalogue is being expanded and covers only the institutions Pathway AI actually tracks, today in Finland and Poland. A university here is not a complete picture of what it teaches: only the programs we keep current are counted.",
   "pub.search": "Search universities by name",
   "pub.searchButton": "Search",
   "pub.loading": "Loading universities…",
@@ -70,7 +70,7 @@ export const en = {
     "Fees, deadlines and requirements are not shown yet while we confirm the reuse terms of the official data. Use the official website for current details.",
   "home.featuredTitle": "Universities you can explore now",
   "home.featuredHelp":
-    "Real institutions Pathway AI tracks today (Finland). The list grows as more official sources are connected.",
+    "Real institutions Pathway AI tracks today (Finland and Poland). The list grows as more official sources are connected.",
   "home.exploreUniversities": "Explore universities",
   "save.promptTitle": "A free account is needed to save",
   "save.promptBody":
@@ -423,7 +423,7 @@ export const en = {
   "unifact.fundingDetail":
     "Eligibility and conditions apply. Funding is not guaranteed.",
   "unifact.outside":
-    "This program is outside the curated Finnish catalog. Its existing link and saved record are retained; check its sources for current availability.",
+    "This program is outside the curated catalog. Its existing link and saved record are retained; check its sources for current availability.",
   "unifact.structureTitle": "Structure and curriculum",
   "programLinks.applyStudyinfo":
     "Apply via Studyinfo — official application portal",
